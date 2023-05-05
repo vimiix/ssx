@@ -16,14 +16,18 @@ func SetVerbose(v bool) {
 	verbose = v
 }
 
-func Logf(format string, v ...any) {
+func Debugf(format string, v ...any) {
 	lock.RLock()
 	defer lock.RUnlock()
 	if verbose {
-		log.Printf(format, v...)
+		log.Printf("[debug] "+format, v...)
 	}
 }
 
-func Fatalf(format string, v ...any) {
-	log.Fatalf(format, v...)
+func Infof(format string, v ...any) {
+	log.Printf("[info] "+format, v...)
+}
+
+func Errorf(format string, v ...any) {
+	log.Printf("[error] "+format, v...)
 }
