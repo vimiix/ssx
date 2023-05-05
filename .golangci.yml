@@ -1,0 +1,29 @@
+run:
+  timeout: 5m
+  modules-download-mode: readonly
+linters:
+  disable-all: true
+  fast: false
+  enable:
+    - bodyclose
+    - depguard
+    - dogsled
+    - dupl
+    - errcheck
+    - exportloopref
+    - exhaustive
+    - gosimple
+    - govet
+    - ineffassign
+    - misspell
+    - predeclared
+    - revive
+    - staticcheck
+    - stylecheck
+    - unconvert
+    - whitespace
+    - gofmt
+    - goimports
+    - gocyclo
+    - typecheck
+    - unused
