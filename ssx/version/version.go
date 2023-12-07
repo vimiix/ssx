@@ -6,23 +6,21 @@ import (
 	"strings"
 )
 
+// modify these values from build flag
 var (
-	// Major is the major version of ptk
-	Major = "0"
-	// Minor is the minor version of ptk
-	Minor = "0"
-	// Patch is the patch version of ptk
-	Patch = "0"
-	// Revision is the current git commit hash
-	Revision = "Unknown"
-	// BuildDate is the built date time
+	Major     = "0"
+	Minor     = "0"
+	Patch     = "0"
+	Revision  = "Unknown"
 	BuildDate = "Unknown"
 )
 
+// Semver semantic version
 func Semver() string {
 	return fmt.Sprintf("%s.%s.%s", Major, Minor, Patch)
 }
 
+// Detail all infomations of ssx version
 func Detail() string {
 	return strings.TrimSpace(fmt.Sprintf(`
 Version:    %s

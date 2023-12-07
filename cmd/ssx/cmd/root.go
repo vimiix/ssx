@@ -4,60 +4,59 @@ import (
 	"fmt"
 	"os"
 
-	"github.com/fatih/color"
-	"github.com/pkg/errors"
 	"github.com/vimiix/cobra"
 
-	"github.com/vimiix/ssx/internal/config"
-	"github.com/vimiix/ssx/internal/selector"
-	"github.com/vimiix/ssx/internal/version"
-	"github.com/vimiix/ssx/pkg/lg"
+	"github.com/vimiix/ssx/internal/lg"
+	"github.com/vimiix/ssx/ssx"
+	"github.com/vimiix/ssx/ssx/version"
 )
 
-const (
-	use   = "ssx"
-	short = "ssx is a ssh wrapper"
+var (
+	logVerbose   bool
+	printVersion bool
+	ssxInst      *ssx.SSX
 )
 
-var Root = New(use, short)
-
-func New(use, short string) *cobra.Command {
-	verboseFlag := false
-	versionFlag := false
+func NewRoot() *cobra.Command {
+	opt := &ssx.CmdOption{}
 	root := &cobra.Command{
-		Use:               use,
-		Short:             short,
-		SilenceUsage:      true,
-		SilenceErrors:     true,
-		DisableAutoGenTag: true,
-		PersistentPreRun: func(cmd *cobra.Command, args []string) {
-			lg.SetVerbose(verboseFlag)
+		Use:                "ssx",
+		Short:              "ssx is a ssh wrapper",
+		SilenceUsage:       true,
+		SilenceErrors:      true,
+		DisableAutoGenTag:  true,
+		DisableSuggestions: true,
+		PersistentPreRunE: func(cmd *cobra.Command, args []string) error {
+			lg.SetVerbose(logVerbose)
+			if !printVersion {
+				s, err := ssx.NewSSX(opt)
+				if err != nil {
+					return err
+				}
+				ssxInst = s
+			}
+			return nil
 		},
 		RunE: func(cmd *cobra.Command, args []string) error {
-			if versionFlag {
+			if printVersion {
 				fmt.Fprintln(os.Stdout, version.Detail())
 				return nil
 			}
-			nodes, err := config.Load(cmd.Context())
-			if err != nil {
-				lg.Errorf(err.Error())
-				return err
-			}
-
-			if len(nodes) == 0 {
-				fmt.Fprintln(os.Stderr, color.YellowString(`No nodes have been configured.
-You can put config file ".ssx.yaml" in home directory or current directory or declare with SSXCONFIG environment.
-Also you can add node via command: "%s add", it will append node to default config file (~/.ssx.yaml)`, os.Args[0]))
-				return errors.New("no nodes")
-			}
-			// TODO
-			_ = selector.NewSelector(nodes, nil)
-			return cmd.Usage()
+			return ssxInst.Main(cmd.Context())
 		},
 	}
 
-	root.PersistentFlags().BoolVarP(&versionFlag, "version", "v", false, "Print ssx version")
-	root.PersistentFlags().BoolVar(&verboseFlag, "verbose", false, "Output detail logs")
+	root.PersistentFlags().BoolVarP(&printVersion, "version", "v", false, "Print ssx version")
+	root.PersistentFlags().BoolVar(&logVerbose, "verbose", false, "Output detail logs")
 
+	root.Flags().StringVarP(&opt.DBFile, "file", "f", "", "Filepath to store auth data")
+	root.Flags().StringVarP(&opt.Addr, "server", "s", "", "Target server address\nSupport formats: [user@]host[:port]")
+	root.Flags().StringVarP(&opt.Tag, "tag", "t", "", "Target server address\nSupport formats: [user@]host[:port]")
+
+	root.AddCommand(newListCmd())
+	root.AddCommand(newDeleteCmd())
+
+	root.CompletionOptions.HiddenDefaultCmd = true
+	root.SetHelpCommand(&cobra.Command{Hidden: true})
 	return root
 }
