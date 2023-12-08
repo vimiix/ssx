@@ -3,6 +3,7 @@ package bbolt
 import (
 	"encoding/json"
 	"fmt"
+	"time"
 
 	"go.etcd.io/bbolt"
 
@@ -25,9 +26,10 @@ type Repo struct {
 }
 
 func (r *Repo) GetMetadata(key []byte) ([]byte, error) {
-	if r.db == nil {
-		return nil, errmsg.ErrRepoNotOpen
+	if err := r.open(); err != nil {
+		return nil, err
 	}
+	defer r.close()
 	var res []byte
 	_ = r.db.View(func(tx *bbolt.Tx) error {
 		res = tx.Bucket(r.metaBucket).Get(key)
@@ -37,19 +39,20 @@ func (r *Repo) GetMetadata(key []byte) ([]byte, error) {
 }
 
 func (r *Repo) SetMetadata(key []byte, value []byte) error {
-	if r.db == nil {
-		return errmsg.ErrRepoNotOpen
+	if err := r.open(); err != nil {
+		return err
 	}
+	defer r.close()
 	return r.db.Update(func(tx *bbolt.Tx) error {
 		return tx.Bucket(r.metaBucket).Put(key, value)
 	})
 }
 
-func (r *Repo) UpdateEntry(e *entry.Entry) (err error) {
-	if r.db == nil {
-		err = errmsg.ErrRepoNotOpen
-		return
+func (r *Repo) TouchEntry(e *entry.Entry) error {
+	if err := r.open(); err != nil {
+		return err
 	}
+	defer r.close()
 
 	return r.db.Update(func(tx *bbolt.Tx) error {
 		b := tx.Bucket(r.entryBucket)
@@ -58,6 +61,19 @@ func (r *Repo) UpdateEntry(e *entry.Entry) (err error) {
 		if bs == nil {
 			// insert
 			e.ID, _ = b.NextSequence()
+			now := time.Now()
+			e.VisitCount = 1
+			e.CreateAt = now
+			e.UpdateAt = now
+		} else {
+			var rawEntry = &entry.Entry{}
+			if err := json.Unmarshal(bs, rawEntry); err != nil {
+				return err
+			}
+			e.ID = rawEntry.ID
+			e.VisitCount = rawEntry.VisitCount + 1
+			e.CreateAt = rawEntry.CreateAt
+			e.UpdateAt = time.Now()
 		}
 		// update
 		buf, marshalErr := json.Marshal(e)
@@ -69,10 +85,10 @@ func (r *Repo) UpdateEntry(e *entry.Entry) (err error) {
 }
 
 func (r *Repo) GetEntry(ip, user string) (t *entry.Entry, err error) {
-	if r.db == nil {
-		err = errmsg.ErrRepoNotOpen
+	if err = r.open(); err != nil {
 		return
 	}
+	defer r.close()
 
 	err = r.db.View(func(tx *bbolt.Tx) error {
 		bs := tx.Bucket(r.entryBucket).Get(entryKey(ip, user))
@@ -86,9 +102,10 @@ func (r *Repo) GetEntry(ip, user string) (t *entry.Entry, err error) {
 
 // GetAllEntries returns all entries map, key format is "ip/user"
 func (r *Repo) GetAllEntries() (map[string]*entry.Entry, error) {
-	if r.db == nil {
-		return nil, errmsg.ErrRepoNotOpen
+	if err := r.open(); err != nil {
+		return nil, err
 	}
+	defer r.close()
 
 	var (
 		err error
@@ -111,9 +128,10 @@ func (r *Repo) GetAllEntries() (map[string]*entry.Entry, error) {
 }
 
 func (r *Repo) DeleteEntry(ip, user string) error {
-	if r.db == nil {
-		return errmsg.ErrRepoNotOpen
+	if err := r.open(); err != nil {
+		return err
 	}
+	defer r.close()
 
 	return r.db.Update(func(tx *bbolt.Tx) error {
 		b := tx.Bucket(r.entryBucket)
@@ -121,12 +139,12 @@ func (r *Repo) DeleteEntry(ip, user string) error {
 	})
 }
 
-func (r *Repo) Open() error {
-	db, err := bbolt.Open(r.file, 0600, nil)
-	if err != nil {
+func (r *Repo) Init() error {
+	if err := r.open(); err != nil {
 		return err
 	}
-	err = db.Update(func(tx *bbolt.Tx) error {
+	defer r.close()
+	return r.db.Update(func(tx *bbolt.Tx) error {
 		for _, bucketName := range r.buckets() {
 			_, createErr := tx.CreateBucketIfNotExists(bucketName)
 			if createErr != nil {
@@ -135,14 +153,9 @@ func (r *Repo) Open() error {
 		}
 		return nil
 	})
-	if err != nil {
-		return err
-	}
-	r.db = db
-	return nil
 }
 
-func (r *Repo) Close() error {
+func (r *Repo) close() error {
 	if r.db == nil {
 		return nil
 	}
@@ -151,6 +164,15 @@ func (r *Repo) Close() error {
 		r.db = nil
 	}
 	return err
+}
+
+func (r *Repo) open() error {
+	db, err := bbolt.Open(r.file, 0600, nil)
+	if err != nil {
+		return err
+	}
+	r.db = db
+	return nil
 }
 
 func (r *Repo) buckets() [][]byte {

@@ -7,12 +7,11 @@ import (
 
 // Repo define a KV store interface
 type Repo interface {
-	Open() error
-	Close() error
+	Init() error
 	GetMetadata(key []byte) ([]byte, error)
 	SetMetadata(key []byte, value []byte) error
-	UpdateEntry(t *entry.Entry) (err error)
-	GetEntry(ip, user string) (t *entry.Entry, err error)
+	TouchEntry(e *entry.Entry) (err error)
+	GetEntry(ip, user string) (e *entry.Entry, err error)
 	GetAllEntries() (map[string]*entry.Entry, error)
 	DeleteEntry(ip, user string) error
 }

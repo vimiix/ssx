@@ -17,17 +17,23 @@ import (
 	"github.com/vimiix/ssx/ssx/env"
 )
 
+const (
+	SourceSSHConfig = "ssh_config"
+	SourceSSXStore  = "ssx_store"
+)
+
 // Entry represent a target server
 type Entry struct {
 	ID         uint64    `json:"id"`
 	Host       string    `json:"host"`
 	User       string    `json:"user"`
 	Port       string    `json:"port"`
-	VisitCount int       `json:"visit_count"`
+	VisitCount int       `json:"visit_count"` // Perhaps I will support sorting by VisitCount in the future
 	KeyPath    string    `json:"key_path"`
 	Passphrase string    `json:"passphrase"`
 	Password   string    `json:"password"`
 	Tags       []string  `json:"tags"`
+	Source     string    `json:"source"`
 	CreateAt   time.Time `json:"create_at"`
 	UpdateAt   time.Time `json:"update_at"`
 	// TODO support jump server
@@ -89,12 +95,17 @@ func (e *Entry) AuthMethods() []ssh.AuthMethod {
 	}
 
 	// key file auth methods
-	rsaAuths := e.privateKeyAuthMethods()
-	if len(rsaAuths) > 0 {
-		authMethods = append(authMethods, rsaAuths...)
+	keyfileAuths := e.privateKeyAuthMethods()
+	if len(keyfileAuths) > 0 {
+		authMethods = append(authMethods, keyfileAuths...)
 	}
 
-	interactive := ssh.KeyboardInteractive(func(name, instruction string, questions []string, echos []bool) (answers []string, err error) {
+	authMethods = append(authMethods, e.interactAuth())
+	return authMethods
+}
+
+func (e *Entry) interactAuth() ssh.AuthMethod {
+	return ssh.KeyboardInteractive(func(name, instruction string, questions []string, echos []bool) (answers []string, err error) {
 		answers = make([]string, 0, len(questions))
 		for i, q := range questions {
 			fmt.Print(q)
@@ -117,9 +128,6 @@ func (e *Entry) AuthMethods() []ssh.AuthMethod {
 		}
 		return answers, nil
 	})
-
-	authMethods = append(authMethods, interactive)
-	return authMethods
 }
 
 func (e *Entry) privateKeyAuthMethods() []ssh.AuthMethod {

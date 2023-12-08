@@ -8,6 +8,7 @@ import (
 	"path"
 	"path/filepath"
 	"regexp"
+	"sort"
 	"strconv"
 	"strings"
 
@@ -15,7 +16,6 @@ import (
 	"github.com/manifoldco/promptui"
 	"github.com/pkg/errors"
 
-	"github.com/vimiix/ssx/internal/cleaner"
 	"github.com/vimiix/ssx/internal/lg"
 	"github.com/vimiix/ssx/internal/tui"
 	"github.com/vimiix/ssx/internal/utils"
@@ -60,7 +60,7 @@ func NewSSX(opt *CmdOption) (*SSX, error) {
 	}
 	ssx := &SSX{opt: opt}
 
-	if err := ssx.openRepo(); err != nil {
+	if err := ssx.initRepo(); err != nil {
 		return nil, err
 	}
 	if err := ssx.loadUserSSHConfig(); err != nil {
@@ -69,17 +69,10 @@ func NewSSX(opt *CmdOption) (*SSX, error) {
 	return ssx, nil
 }
 
-func (s *SSX) openRepo() error {
+func (s *SSX) initRepo() error {
 	s.repo = bbolt.NewRepo(s.opt.DBFile)
-	lg.Debug("open repo")
-	if err := s.repo.Open(); err != nil {
-		return err
-	}
-	cleaner.RegisterCallback(func() {
-		lg.Debug("close repo")
-		_ = s.repo.Close()
-	})
-	return nil
+	lg.Debug("init repo")
+	return s.repo.Init()
 }
 
 func (s *SSX) loadUserSSHConfig() error {
@@ -125,14 +118,15 @@ func (s *SSX) loadUserSSHConfig() error {
 		} else {
 			port = "22"
 		}
-		user, _ := cfg.Get(tags[0], "User")
+		username, _ := cfg.Get(tags[0], "User")
 		keyPath, _ := cfg.Get(tags[0], "IdentityFile")
 		e := &entry.Entry{
 			Host:    hostname,
 			Port:    port,
-			User:    user,
+			User:    username,
 			KeyPath: utils.ExpandHomeDir(keyPath),
 			Tags:    tags,
+			Source:  entry.SourceSSHConfig,
 		}
 		s.sshEntryMap[e.UniqueKey()] = e
 	}
@@ -149,21 +143,16 @@ func (s *SSX) Main(ctx context.Context) error {
 	} else if s.opt.Tag != "" {
 		e, err = s.getEntryByTag(s.opt.Tag)
 	} else {
-		e, err = s.SelectEntryFromAll()
+		e, err = s.selectEntryFromAll()
 	}
 	if err != nil {
 		return err
 	}
 
-	return s.Run(e)
+	return NewClient(e, s.repo).Run(ctx)
 }
 
-func (s *SSX) Run(e *entry.Entry) error {
-	cli := NewClient(e)
-	return cli.Run()
-}
-
-func (s *SSX) SelectEntryFromAll() (*entry.Entry, error) {
+func (s *SSX) selectEntryFromAll() (*entry.Entry, error) {
 	var es []*entry.Entry
 	em, err := s.repo.GetAllEntries()
 	if err != nil {
@@ -180,7 +169,7 @@ func (s *SSX) SelectEntryFromAll() (*entry.Entry, error) {
 	return s.selectEntry(es)
 }
 
-var addrRegex = regexp.MustCompile(`^(?:(?P<user>\w+)@)?(?P<host>[\w.-]+)(?:\:(?P<port>\d+))?(?:\/(?P<path>[\w\/.-]+))?$`)
+var addrRegex = regexp.MustCompile(`^(?:(?P<user>\w+)@)?(?P<host>[\w.-]+)(?::(?P<port>\d+))?(?:/(?P<path>[\w/.-]+))?$`)
 
 func (s *SSX) parseFuzzyAddr(addr string) (*entry.Entry, error) {
 	// [user@]host[:port][/path]
@@ -209,14 +198,16 @@ func (s *SSX) parseFuzzyAddr(addr string) (*entry.Entry, error) {
 		if len(candidates) == 1 {
 			return candidates[0], nil
 		}
-		return s.selectEntry(candidates)
+		return s.selectEntry(candidates, "multiple entries found, select one")
 	}
 
 	// new entry
+	lg.Debug("it is a fresh entry")
 	e := &entry.Entry{
-		Host: host,
-		User: username,
-		Port: port,
+		Host:   host,
+		User:   username,
+		Port:   port,
+		Source: entry.SourceSSXStore,
 	}
 	if err = e.Tidy(); err != nil {
 		return nil, err
@@ -226,7 +217,7 @@ func (s *SSX) parseFuzzyAddr(addr string) (*entry.Entry, error) {
 
 func foundTargetByAddr(em map[string]*entry.Entry, host, username, port string) (hit *entry.Entry, candidates []*entry.Entry) {
 	for _, e := range em {
-		if e.Host != host {
+		if !strings.Contains(e.Host, host) {
 			continue
 		}
 		if username != "" && e.User == username {
@@ -250,12 +241,12 @@ func (s *SSX) getEntryByTag(tag string) (*entry.Entry, error) {
 	}
 	candidates = append(candidates, foundTargetByTag(em, tag)...)
 	if len(candidates) == 0 {
-		return nil, errors.Errorf("not found any server by tag: %q", tag)
+		return nil, errors.Errorf("not found any entry by tag: %q", tag)
 	}
 	if len(candidates) == 1 {
-		return candidates[1], nil
+		return candidates[0], nil
 	}
-	return s.selectEntry(candidates)
+	return s.selectEntry(candidates, "multiple entries found, select one")
 }
 
 func foundTargetByTag(em map[string]*entry.Entry, tagKeyword string) (candidates []*entry.Entry) {
@@ -274,18 +265,23 @@ func foundTargetByTag(em map[string]*entry.Entry, tagKeyword string) (candidates
 }
 
 var templates = &promptui.SelectTemplates{
-	Active:   "➤ {{ .User`@`.Host | green }}{{if .Tags }}({{ .Tags | faint}}){{ end }}",
-	Inactive: "  {{ .User`@`.Host | faint }}{{if .Tags }}({{ .Tags | faint}}){{ end }}",
+	Active:   "➤ {{ .User | green }}{{ `@` | green }}{{ .Host | green }}{{if .Tags }} {{ .Tags | faint}}{{ end }}",
+	Inactive: "  {{ .User | faint }}{{ `@` | faint }}{{ .Host | faint }}{{if .Tags }} {{ .Tags | faint}}{{ end }}",
 }
 
-func (s *SSX) selectEntry(es []*entry.Entry) (*entry.Entry, error) {
+func (s *SSX) selectEntry(es []*entry.Entry, promptOption ...string) (*entry.Entry, error) {
 	searcher := func(input string, index int) bool {
 		e := es[index]
 		content := fmt.Sprintf("%s %s", e.String(), strings.Join(e.Tags, " "))
 		return strings.Contains(content, input)
 	}
+
+	promptStr := "select entry"
+	if len(promptOption) > 0 {
+		promptStr = promptOption[0]
+	}
 	prompt := promptui.Select{
-		Label:             "select server:",
+		Label:             promptStr,
 		Items:             es,
 		Size:              20,
 		HideSelected:      true,
@@ -306,36 +302,81 @@ func (s *SSX) ListEntries() error {
 		return err
 	}
 	if len(repoEntryMap) == 0 && len(s.sshEntryMap) == 0 {
-		fmt.Println("Nothing found")
+		fmt.Println("no entry found")
 		return nil
 	}
 
 	if len(repoEntryMap) > 0 {
+		var entries []*entry.Entry
 		header := []string{"ID", "Address", "Tags"}
 		var rows [][]string
-		for _, entry := range repoEntryMap {
+		for _, e := range repoEntryMap {
+			entries = append(entries, e)
+		}
+		sort.Slice(entries, func(i, j int) bool {
+			return entries[i].ID < entries[j].ID
+		})
+		for _, e := range entries {
 			rows = append(rows,
-				[]string{strconv.Itoa(int(entry.ID)), entry.String(), strings.Join(entry.Tags, ",")},
+				[]string{strconv.Itoa(int(e.ID)), e.String(), strings.Join(e.Tags, ",")},
 			)
 		}
-		fmt.Println("Entries (stored by ssx)")
+
+		fmt.Println("Entries (stored in ssx)")
 		tui.PrintTable(header, rows)
 	}
 
 	if len(s.sshEntryMap) > 0 {
 		header := []string{"Address", "Tags"}
 		var rows [][]string
-		for _, entry := range s.sshEntryMap {
+		for _, e := range s.sshEntryMap {
 			rows = append(rows,
-				[]string{entry.String(), strings.Join(entry.Tags, ",")},
+				[]string{e.String(), strings.Join(e.Tags, ",")},
 			)
 		}
+		fmt.Println()
 		fmt.Println("Entries (found in ssh config)")
 		tui.PrintTable(header, rows)
 	}
 	return nil
 }
 
-func (s *SSX) DeleteEntryByID(ctx context.Context, ids ...int) error {
+func (s *SSX) DeleteEntryByID(ids ...int) error {
+	if len(ids) == 0 {
+		return nil
+	}
+
+	em, err := s.repo.GetAllEntries()
+	if err != nil {
+		return err
+	}
+	var deleteMap = map[int]struct{}{}
+	for _, id := range ids {
+		deleteMap[id] = struct{}{}
+	}
+	for _, e := range em {
+		if _, exist := deleteMap[int(e.ID)]; exist {
+			lg.Info("deleting %d ...", e.ID)
+			if deleteErr := s.repo.DeleteEntry(e.Host, e.User); deleteErr != nil {
+				return deleteErr
+			}
+		}
+	}
+	lg.Info("delete successfully")
 	return nil
+}
+
+func (s *SSX) AppendTagByID(id int, tags ...string) error {
+	em, err := s.repo.GetAllEntries()
+	if err != nil {
+		return err
+	}
+	for _, e := range em {
+		if int(e.ID) != id {
+			continue
+		}
+		e.Tags = append(e.Tags, tags...)
+		return s.repo.TouchEntry(e)
+	}
+	return errors.Errorf("not found entry: %d", id)
 }

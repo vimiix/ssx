@@ -7,6 +7,8 @@ import (
 	"os/signal"
 	"syscall"
 
+	"github.com/fatih/color"
+
 	"github.com/vimiix/ssx/cmd/ssx/cmd"
 	"github.com/vimiix/ssx/internal/cleaner"
 )
@@ -20,7 +22,7 @@ func main() {
 	defer cancel()
 
 	if err := cmd.NewRoot().ExecuteContext(ctx); err != nil {
-		fmt.Printf("Error: %+v\n", err)
+		fmt.Println(color.HiRedString("Error: %v", err))
 		exitCode = 1
 	}
 

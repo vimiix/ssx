@@ -1,7 +1,7 @@
 package cmd
 
 import (
-	"github.com/vimiix/cobra"
+	"github.com/spf13/cobra"
 )
 
 func newListCmd() *cobra.Command {

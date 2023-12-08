@@ -4,7 +4,7 @@ import (
 	"fmt"
 	"os"
 
-	"github.com/vimiix/cobra"
+	"github.com/spf13/cobra"
 
 	"github.com/vimiix/ssx/internal/lg"
 	"github.com/vimiix/ssx/ssx"
@@ -45,16 +45,16 @@ func NewRoot() *cobra.Command {
 			return ssxInst.Main(cmd.Context())
 		},
 	}
+	root.Flags().StringVarP(&opt.DBFile, "file", "f", "", "Filepath to store auth data")
+	root.Flags().StringVarP(&opt.Addr, "server", "s", "", "Target server address\nSupport formats: [user@]host[:port]")
+	root.Flags().StringVarP(&opt.Tag, "tag", "t", "", "Search entry by tag")
 
 	root.PersistentFlags().BoolVarP(&printVersion, "version", "v", false, "Print ssx version")
 	root.PersistentFlags().BoolVar(&logVerbose, "verbose", false, "Output detail logs")
 
-	root.Flags().StringVarP(&opt.DBFile, "file", "f", "", "Filepath to store auth data")
-	root.Flags().StringVarP(&opt.Addr, "server", "s", "", "Target server address\nSupport formats: [user@]host[:port]")
-	root.Flags().StringVarP(&opt.Tag, "tag", "t", "", "Target server address\nSupport formats: [user@]host[:port]")
-
 	root.AddCommand(newListCmd())
 	root.AddCommand(newDeleteCmd())
+	root.AddCommand(newTagCmd())
 
 	root.CompletionOptions.HiddenDefaultCmd = true
 	root.SetHelpCommand(&cobra.Command{Hidden: true})
