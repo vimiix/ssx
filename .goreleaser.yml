@@ -6,7 +6,7 @@ builds:
       - -trimpath
     ldflags:
       - -s -w
-      - -X github.com/vimiix/ssx/ssx/version.Version={{.Version}}
+      - -X github.com/vimiix/ssx/ssx/version.Version={{.Tag}}
       - -X github.com/vimiix/ssx/ssx/version.Revision={{.ShortCommit}}
       - -X github.com/vimiix/ssx/ssx/version.BuildDate={{.Date}}
     env:
@@ -21,7 +21,7 @@ builds:
 archives:
   - name_template: >-
       {{ .ProjectName }}_
-      {{ .Version }}_
+      {{ .Tag }}_
       {{ .Os }}_
       {{- if eq .Arch "amd64" }}x86_64{{- else }}{{ .Arch }}{{ end }}
       {{ if .Arm }}v{{ .Arm }}{{ end }}
