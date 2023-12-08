@@ -1,10 +1,5 @@
-before:
-  hooks:
-    - make lint
-
 builds:
-  -
-    id: "ssx"
+  - id: "ssx"
     main: "./cmd/ssx"
     binary: "ssx"
     flags:
