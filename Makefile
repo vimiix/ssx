@@ -1,5 +1,5 @@
 VERSION := $(shell head -1 version)
-GO      := GO111MODULE=on CGO_ENABLED=0 GOPROXY="https://goproxy.cn,direct" go
+GO      := GO111MODULE=on CGO_ENABLED=0 go
 _COMMIT := $(shell git describe --no-match --always --dirty)
 COMMIT  := $(if $(COMMIT),$(COMMIT),$(_COMMIT))
 BUILDDATE  := $(shell date '+%Y-%m-%dT%H:%M:%S')

@@ -12,7 +12,6 @@ builds:
     env:
       - CGO_ENABLED=0
       - GO111MODULE=on
-      - GOPROXY="https://goproxy.cn,direct"
     targets:
       - linux_amd64
       - linux_arm64
