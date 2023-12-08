@@ -6,13 +6,12 @@ import (
 	"os"
 	"os/user"
 	"path/filepath"
-	"syscall"
 	"time"
 
 	"golang.org/x/crypto/ssh"
-	"golang.org/x/term"
 
 	"github.com/vimiix/ssx/internal/lg"
+	"github.com/vimiix/ssx/internal/terminal"
 	"github.com/vimiix/ssx/internal/utils"
 	"github.com/vimiix/ssx/ssx/env"
 )
@@ -21,6 +20,8 @@ const (
 	SourceSSHConfig = "ssh_config"
 	SourceSSXStore  = "ssx_store"
 )
+
+const defaultIdentityFile = "~/.ssh/id_rsa"
 
 // Entry represent a target server
 type Entry struct {
@@ -33,7 +34,7 @@ type Entry struct {
 	Passphrase string    `json:"passphrase"`
 	Password   string    `json:"password"`
 	Tags       []string  `json:"tags"`
-	Source     string    `json:"source"`
+	Source     string    `json:"source"` // Data source, used to distinguish that it is from ssx stored or local ssh configuration
 	CreateAt   time.Time `json:"create_at"`
 	UpdateAt   time.Time `json:"update_at"`
 	// TODO support jump server
@@ -83,6 +84,9 @@ func (e *Entry) Tidy() error {
 	if len(e.Port) <= 0 {
 		e.Port = "22"
 	}
+	if e.KeyPath == "" {
+		e.KeyPath = defaultIdentityFile
+	}
 	return nil
 }
 
@@ -118,7 +122,7 @@ func (e *Entry) interactAuth() ssh.AuthMethod {
 					return nil, err
 				}
 			} else {
-				b, err := term.ReadPassword(syscall.Stdin)
+				b, err := terminal.ReadPassword()
 				if err != nil {
 					return nil, err
 				}
@@ -173,7 +177,7 @@ var defaultRSAKeyFiles = []string{
 
 func (e *Entry) collectKeyfiles() []string {
 	var keypaths []string
-	if e.KeyPath != "" {
+	if e.KeyPath != "" && utils.FileExists(e.KeyPath) {
 		keypaths = append(keypaths, e.KeyPath)
 	}
 	u, err := user.Current()
@@ -183,7 +187,7 @@ func (e *Entry) collectKeyfiles() []string {
 	}
 	for _, fn := range defaultRSAKeyFiles {
 		fp := filepath.Join(u.HomeDir, ".ssh", fn)
-		if !utils.FileExists(fp) {
+		if fp == e.KeyPath || !utils.FileExists(fp) {
 			continue
 		}
 		keypaths = append(keypaths, fp)

@@ -8,13 +8,13 @@ import (
 	"os"
 	"strings"
 	"sync"
-	"syscall"
 	"time"
 
 	"golang.org/x/crypto/ssh"
 	"golang.org/x/term"
 
 	"github.com/vimiix/ssx/internal/lg"
+	"github.com/vimiix/ssx/internal/terminal"
 	"github.com/vimiix/ssx/ssx/entry"
 )
 
@@ -73,7 +73,7 @@ func (c *Client) attach(ctx context.Context, sess *ssh.Session) error {
 		_ = term.Restore(fd, state)
 	}()
 
-	w, h, err := getAndWatchWindowSize(ctx, sess)
+	w, h, err := terminal.GetAndWatchWindowSize(ctx, sess)
 	if err != nil {
 		return err
 	}
@@ -163,7 +163,7 @@ func (c *Client) login(ctx context.Context) error {
 
 	if strings.Contains(err.Error(), "no supported methods remain") {
 		fmt.Printf("%s@%s's password:", c.entry.User, c.entry.Host)
-		bs, readErr := term.ReadPassword(syscall.Stdin)
+		bs, readErr := terminal.ReadPassword()
 		if readErr == nil {
 			p := string(bs)
 			if p != "" {

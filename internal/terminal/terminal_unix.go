@@ -1,6 +1,6 @@
 //go:build !windows
 
-package ssx
+package terminal
 
 import (
 	"context"
@@ -14,7 +14,11 @@ import (
 	"github.com/vimiix/ssx/internal/lg"
 )
 
-func getAndWatchWindowSize(ctx context.Context, sess *ssh.Session) (int, int, error) {
+func ReadPassword() ([]byte, error) {
+	return term.ReadPassword(syscall.Stdin)
+}
+
+func GetAndWatchWindowSize(ctx context.Context, sess *ssh.Session) (int, int, error) {
 	fd := int(os.Stdin.Fd())
 	width, height, err := term.GetSize(fd)
 	if err != nil {

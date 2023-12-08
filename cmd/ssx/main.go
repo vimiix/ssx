@@ -22,7 +22,7 @@ func main() {
 	defer cancel()
 
 	if err := cmd.NewRoot().ExecuteContext(ctx); err != nil {
-		fmt.Println(color.HiRedString("Error: %v", err))
+		fmt.Println(color.HiRedString(err.Error()))
 		exitCode = 1
 	}
 

@@ -1,6 +1,6 @@
 //go:build windows
 
-package ssx
+package terminal
 
 import (
 	"context"
@@ -8,11 +8,16 @@ import (
 
 	"golang.org/x/crypto/ssh"
 	"golang.org/x/sys/windows"
+	"golang.org/x/term"
 
 	"github.com/vimiix/ssx/internal/lg"
 )
 
-func getAndWatchWindowSize(ctx context.Context, sess *ssh.Session) (int, int, error) {
+func ReadPassword() ([]byte, error) {
+	return term.ReadPassword(int(windows.Stdin))
+}
+
+func GetAndWatchWindowSize(ctx context.Context, sess *ssh.Session) (int, int, error) {
 	fd := windows.Stdout
 	width, height, err := getConsoleSize(fd)
 	if err != nil {

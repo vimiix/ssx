@@ -25,9 +25,10 @@ import (
 )
 
 type CmdOption struct {
-	DBFile string
-	Addr   string
-	Tag    string
+	DBFile       string
+	Addr         string
+	Tag          string
+	IdentityFile string
 }
 
 // Tidy complete unset fields with default values
@@ -204,10 +205,11 @@ func (s *SSX) parseFuzzyAddr(addr string) (*entry.Entry, error) {
 	// new entry
 	lg.Debug("it is a fresh entry")
 	e := &entry.Entry{
-		Host:   host,
-		User:   username,
-		Port:   port,
-		Source: entry.SourceSSXStore,
+		Host:    host,
+		User:    username,
+		Port:    port,
+		KeyPath: s.opt.IdentityFile,
+		Source:  entry.SourceSSXStore,
 	}
 	if err = e.Tidy(); err != nil {
 		return nil, err

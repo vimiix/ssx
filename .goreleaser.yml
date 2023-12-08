@@ -1,0 +1,37 @@
+before:
+  hooks:
+    - make lint
+
+builds:
+  -
+    id: "ssx"
+    main: "./cmd/ssx"
+    binary: "ssx"
+    flags:
+      - -trimpath
+    ldflags:
+      - -s -w
+      - -X github.com/vimiix/ssx/ssx/version.Version={{.Version}}
+      - -X github.com/vimiix/ssx/ssx/version.Revision={{.ShortCommit}}
+      - -X github.com/vimiix/ssx/ssx/version.BuildDate={{.Date}}
+    env:
+      - CGO_ENABLED=0
+      - GO111MODULE=on
+      - GOPROXY="https://goproxy.cn,direct"
+    targets:
+      - linux_amd64
+      - linux_arm64
+      - darwin_amd64
+      - darwin_arm64
+      - windows_amd64
+archives:
+  - name_template: '{{ .ProjectName }}_{{ .Version }}_{{ .Os }}_{{- if eq .Arch "amd64" }}x86_64{{- else }}{{ .Arch }}{{ end }}{{ if .Arm }}v{{ .Arm }}{{ end }}'
+    format: tar.gz
+    format_overrides:
+      - goos: windows
+        format: zip
+    files:
+      - LICENSE
+      - README.md
+snapshot:
+  name_template: "{{ incpatch .Version }}-preview"

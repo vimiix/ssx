@@ -1,18 +1,12 @@
-SEMVER := $(shell head -1 version)
-VERSION_MAJOR := $(shell echo $(SEMVER)|awk -F '.' '{ print $$1 }')
-VERSION_MINOR := $(shell echo $(SEMVER)|awk -F '.' '{ print $$2 }')
-VERSION_PATCH := $(shell echo $(SEMVER)|awk -F '.' '{ print $$3 }')
-
+VERSION := $(shell head -1 version)
 GO      := GO111MODULE=on CGO_ENABLED=0 GOPROXY="https://goproxy.cn,direct" go
 _COMMIT := $(shell git describe --no-match --always --dirty)
 COMMIT  := $(if $(COMMIT),$(COMMIT),$(_COMMIT))
 BUILDDATE  := $(shell date '+%Y-%m-%dT%H:%M:%S')
 REPO    := github.com/vimiix/ssx
-LDFLAGS := -X "$(REPO)/internal/version.Major=$(VERSION_MAJOR)"
-LDFLAGS += -X "$(REPO)/internal/version.Minor=$(VERSION_MINOR)"
-LDFLAGS += -X "$(REPO)/internal/version.Patch=$(VERSION_PATCH)"
-LDFLAGS += -X "$(REPO)/internal/version.Revision=$(COMMIT)"
-LDFLAGS += -X "$(REPO)/internal/version.BuildDate=$(BUILDDATE)"
+LDFLAGS := -X "$(REPO)/ssx/version.Version=$(VERSION)"
+LDFLAGS += -X "$(REPO)/ssx/version.Revision=$(COMMIT)"
+LDFLAGS += -X "$(REPO)/ssx/version.BuildDate=$(BUILDDATE)"
 LDFLAGS += $(EXTRA_LDFLAGS)
 FILES   := $$(find . -name "*.go")
 
@@ -36,10 +30,18 @@ fmt: ## format source code
 	$(shell goimports -w $(FILES) 2>/dev/null)
 
 .PHONY: lint
-lint: ## lint code with golangci-lint
+lint: tidy fmt ## lint code with golangci-lint
 	$([[ command -v golangci-lint ]] || go install github.com/golangci/golangci-lint/cmd/golangci-lint@v1.51.1)
 	@golangci-lint run -v
 
 .PHONY: ssx
-ssx: tidy fmt lint ## build ssx binary
+ssx: lint ## build ssx binary
 	$(GO) build -ldflags '$(LDFLAGS)' -gcflags '-N -l' -o dist/ssx ./cmd/ssx/main.go
+
+.PHONY: tag
+tag: ## make tag with version.txt
+	git tag -a "$(VERSION)" -m "Release version $(VERSION)"
+
+.PHONY: snapshot
+snapshot: ## build ssx release snapshot
+	goreleaser release --clean --snapshot

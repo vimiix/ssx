@@ -7,7 +7,7 @@ import (
 func newListCmd() *cobra.Command {
 	cmd := &cobra.Command{
 		Use:   "list",
-		Short: "List all entries",
+		Short: "list all entries",
 		RunE: func(cmd *cobra.Command, args []string) error {
 			return ssxInst.ListEntries()
 		}}
