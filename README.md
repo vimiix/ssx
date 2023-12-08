@@ -5,9 +5,9 @@
 
 <p align="center">
     <a href="https://github.com/vimiix/ssx/blob/main/LICENSE" alt="license">
-    <img src="https://img.shields.io/github/license/vimiix/ssx" /></a>
+    <img src="https://img.shields.io/badge/License-MIT-jasper" /></a>
     <a href="https://github.com/vimiix" alt="author">
-    <img src="https://img.shields.io/badge/author-vimiix-f39f37" /></a>
+    <img src="https://img.shields.io/badge/author-Vimiix-blue" /></a>
 </p>
 
 🦅 ssx is an ssh hunter.
