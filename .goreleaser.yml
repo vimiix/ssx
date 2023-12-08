@@ -20,7 +20,12 @@ builds:
       - darwin_arm64
       - windows_amd64
 archives:
-  - name_template: '{{ .ProjectName }}_{{ .Version }}_{{ .Os }}_{{- if eq .Arch "amd64" }}x86_64{{- else }}{{ .Arch }}{{ end }}{{ if .Arm }}v{{ .Arm }}{{ end }}'
+  - name_template: >-
+      {{ .ProjectName }}_
+      {{ .Version }}_
+      {{ .Os }}_
+      {{- if eq .Arch "amd64" }}x86_64{{- else }}{{ .Arch }}{{ end }}
+      {{ if .Arm }}v{{ .Arm }}{{ end }}
     format: tar.gz
     format_overrides:
       - goos: windows
