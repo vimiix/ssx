@@ -22,7 +22,7 @@ so you do not need to enter the password again when you log in again.
 
 ## Getting Started
 
-## Installation
+### Installation
 
 Download binary from [releases](https://github.com/vimiix/ssx/releases), extract it and add its path to your `$PATH` list.
 
