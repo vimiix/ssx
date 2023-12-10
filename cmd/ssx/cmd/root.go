@@ -21,11 +21,9 @@ func NewRoot() *cobra.Command {
 	opt := &ssx.CmdOption{}
 	root := &cobra.Command{
 		Use:   "ssx",
-		Short: "🦅 ssx is an ssh hunter",
-		Example: `$ ssx
-$ ssx -s [USER@]HOST[:PORT] [-i IDENTITY_FILE]
-$ ssx -t TAG_NAME
-`,
+		Short: "🦅 ssx is a retentive ssh client",
+		Example: `# If more than one flag of -i, -s ,-t specified, priority is ENTRY_ID > ADDRESS > TAG_NAME
+ssx [-i ENTRY_ID] [-s [USER@]HOST[:PORT]] [-k IDENTITY_FILE] [-t TAG_NAME]`,
 		SilenceUsage:       true,
 		SilenceErrors:      true,
 		DisableAutoGenTag:  true,
@@ -50,9 +48,10 @@ $ ssx -t TAG_NAME
 		},
 	}
 	root.Flags().StringVarP(&opt.DBFile, "file", "f", "", "filepath to store auth data")
+	root.Flags().Uint64VarP(&opt.EntryID, "id", "i", 0, "entry id")
 	root.Flags().StringVarP(&opt.Addr, "server", "s", "", "target server address\nsupport formats: [user@]host[:port]")
 	root.Flags().StringVarP(&opt.Tag, "tag", "t", "", "search entry by tag")
-	root.Flags().StringVarP(&opt.IdentityFile, "identity", "i", "", "identity_file path")
+	root.Flags().StringVarP(&opt.IdentityFile, "keyfile", "k", "", "identity_file path")
 
 	root.PersistentFlags().BoolVarP(&printVersion, "version", "v", false, "print ssx version")
 	root.PersistentFlags().BoolVar(&logVerbose, "verbose", false, "output detail logs")

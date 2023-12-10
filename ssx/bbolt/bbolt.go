@@ -1,8 +1,8 @@
 package bbolt
 
 import (
+	"encoding/binary"
 	"encoding/json"
-	"fmt"
 	"time"
 
 	"go.etcd.io/bbolt"
@@ -12,10 +12,11 @@ import (
 	"github.com/vimiix/ssx/ssx/entry"
 )
 
-// entryKey returns formatted unique key of Entry
-func entryKey(ip, user string) []byte {
-	s := fmt.Sprintf("%s/%s", ip, user)
-	return []byte(s)
+// itob returns an 8-byte big endian representation of v.
+func itob(v uint64) []byte {
+	b := make([]byte, 8)
+	binary.BigEndian.PutUint64(b, v)
+	return b
 }
 
 type Repo struct {
@@ -31,6 +32,7 @@ func (r *Repo) GetMetadata(key []byte) ([]byte, error) {
 	}
 	defer r.close()
 	var res []byte
+	lg.Debug("bbolt repo: get metadata: %s", string(key))
 	_ = r.db.View(func(tx *bbolt.Tx) error {
 		res = tx.Bucket(r.metaBucket).Get(key)
 		return nil
@@ -43,6 +45,7 @@ func (r *Repo) SetMetadata(key []byte, value []byte) error {
 		return err
 	}
 	defer r.close()
+	lg.Debug("bbolt repo: set metadata: %s", string(key))
 	return r.db.Update(func(tx *bbolt.Tx) error {
 		return tx.Bucket(r.metaBucket).Put(key, value)
 	})
@@ -54,11 +57,14 @@ func (r *Repo) TouchEntry(e *entry.Entry) error {
 	}
 	defer r.close()
 
+	lg.Debug("bbolt repo: touch entry: %d", e.ID)
 	return r.db.Update(func(tx *bbolt.Tx) error {
 		b := tx.Bucket(r.entryBucket)
-		key := entryKey(e.Host, e.User)
-		bs := b.Get(key)
-		if bs == nil {
+		var bs []byte
+		if e.ID > 0 {
+			bs = b.Get(itob(e.ID))
+		}
+		if len(bs) == 0 {
 			// insert
 			e.ID, _ = b.NextSequence()
 			now := time.Now()
@@ -80,28 +86,30 @@ func (r *Repo) TouchEntry(e *entry.Entry) error {
 		if marshalErr != nil {
 			return marshalErr
 		}
-		return b.Put(key, buf)
+		return b.Put(itob(e.ID), buf)
 	})
 }
 
-func (r *Repo) GetEntry(ip, user string) (t *entry.Entry, err error) {
+func (r *Repo) GetEntry(id uint64) (t *entry.Entry, err error) {
 	if err = r.open(); err != nil {
 		return
 	}
 	defer r.close()
 
+	lg.Debug("bbolt repo: get entry by id: %d", id)
 	err = r.db.View(func(tx *bbolt.Tx) error {
-		bs := tx.Bucket(r.entryBucket).Get(entryKey(ip, user))
-		if bs == nil {
+		bs := tx.Bucket(r.entryBucket).Get(itob(id))
+		if len(bs) == 0 {
 			return errmsg.ErrEntryNotExist
 		}
+		t = &entry.Entry{}
 		return json.Unmarshal(bs, t)
 	})
 	return
 }
 
 // GetAllEntries returns all entries map, key format is "ip/user"
-func (r *Repo) GetAllEntries() (map[string]*entry.Entry, error) {
+func (r *Repo) GetAllEntries() (map[uint64]*entry.Entry, error) {
 	if err := r.open(); err != nil {
 		return nil, err
 	}
@@ -109,9 +117,10 @@ func (r *Repo) GetAllEntries() (map[string]*entry.Entry, error) {
 
 	var (
 		err error
-		m   = map[string]*entry.Entry{}
+		m   = map[uint64]*entry.Entry{}
 	)
 
+	lg.Debug("bbolt repo: get all enrties")
 	err = r.db.View(func(tx *bbolt.Tx) error {
 		b := tx.Bucket(r.entryBucket)
 		c := b.Cursor()
@@ -120,22 +129,23 @@ func (r *Repo) GetAllEntries() (map[string]*entry.Entry, error) {
 			if unmarshalErr := json.Unmarshal(v, &t); unmarshalErr != nil {
 				return unmarshalErr
 			}
-			m[string(k)] = &t
+			m[t.ID] = &t
 		}
 		return nil
 	})
 	return m, err
 }
 
-func (r *Repo) DeleteEntry(ip, user string) error {
+func (r *Repo) DeleteEntry(id uint64) error {
 	if err := r.open(); err != nil {
 		return err
 	}
 	defer r.close()
 
+	lg.Debug("bbolt repo: delete entry: %d", id)
 	return r.db.Update(func(tx *bbolt.Tx) error {
 		b := tx.Bucket(r.entryBucket)
-		return b.Delete(entryKey(ip, user))
+		return b.Delete(itob(id))
 	})
 }
 

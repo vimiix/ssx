@@ -11,9 +11,9 @@ type Repo interface {
 	GetMetadata(key []byte) ([]byte, error)
 	SetMetadata(key []byte, value []byte) error
 	TouchEntry(e *entry.Entry) (err error)
-	GetEntry(ip, user string) (e *entry.Entry, err error)
-	GetAllEntries() (map[string]*entry.Entry, error)
-	DeleteEntry(ip, user string) error
+	GetEntry(id uint64) (*entry.Entry, error)
+	GetAllEntries() (map[uint64]*entry.Entry, error)
+	DeleteEntry(id uint64) error
 }
 
 var _ Repo = (*bbolt.Repo)(nil)

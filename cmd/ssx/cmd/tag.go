@@ -1,25 +1,41 @@
 package cmd
 
 import (
+	"github.com/pkg/errors"
 	"github.com/spf13/cobra"
 )
 
 func newTagCmd() *cobra.Command {
 	var (
-		tags []string
-		id   int
+		appendtTags []string
+		deleteTags  []string
+		id          int
 	)
 	cmd := &cobra.Command{
 		Use:     "tag",
-		Short:   "tag an entry by id",
-		Example: "ssx tag -i 1 -t tag1 [-t tag2]",
+		Short:   "add or delete tag for entry by id",
+		Example: "ssx tag -i <ENTRY_ID> [-t TAG1 [-t TAG2 ...]] [-d TAG3 [-d TAG4 ...]]",
 		RunE: func(cmd *cobra.Command, args []string) error {
-			return ssxInst.AppendTagByID(id, tags...)
+			if len(appendtTags) == 0 && len(deleteTags) == 0 {
+				return errors.New("no tag is spicified")
+			}
+			if len(deleteTags) > 0 {
+				if err := ssxInst.DeleteTagByID(id, deleteTags...); err != nil {
+					return err
+				}
+			}
+			if len(appendtTags) > 0 {
+				if err := ssxInst.AppendTagByID(id, appendtTags...); err != nil {
+					return err
+				}
+			}
+			return nil
 		},
 	}
 
-	cmd.Flags().StringSliceVarP(&tags, "tag", "t", nil, "tag name")
 	cmd.Flags().IntVarP(&id, "id", "i", 0, "entry id")
-	cmd.MarkFlagsRequiredTogether("id", "tag")
+	cmd.Flags().StringSliceVarP(&appendtTags, "tag", "t", nil, "tag name to add")
+	cmd.Flags().StringSliceVarP(&deleteTags, "delete", "d", nil, "tag name to delete")
+	_ = cmd.MarkFlagRequired("id")
 	return cmd
 }

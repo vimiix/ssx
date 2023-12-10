@@ -7,4 +7,5 @@ import (
 var (
 	ErrEntryNotExist = errors.New("entry does not exist")
 	ErrRepoNotOpen   = errors.New("repo is not open")
+	ErrNoEntry       = errors.New("no entry found")
 )

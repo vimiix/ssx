@@ -16,7 +16,9 @@ import (
 	"github.com/manifoldco/promptui"
 	"github.com/pkg/errors"
 
+	"github.com/vimiix/ssx/internal/errmsg"
 	"github.com/vimiix/ssx/internal/lg"
+	"github.com/vimiix/ssx/internal/slice"
 	"github.com/vimiix/ssx/internal/tui"
 	"github.com/vimiix/ssx/internal/utils"
 	"github.com/vimiix/ssx/ssx/bbolt"
@@ -26,6 +28,7 @@ import (
 
 type CmdOption struct {
 	DBFile       string
+	EntryID      uint64
 	Addr         string
 	Tag          string
 	IdentityFile string
@@ -129,7 +132,7 @@ func (s *SSX) loadUserSSHConfig() error {
 			Tags:    tags,
 			Source:  entry.SourceSSHConfig,
 		}
-		s.sshEntryMap[e.UniqueKey()] = e
+		s.sshEntryMap[e.String()] = e
 	}
 	return nil
 }
@@ -139,7 +142,9 @@ func (s *SSX) Main(ctx context.Context) error {
 		e   *entry.Entry
 		err error
 	)
-	if s.opt.Addr != "" {
+	if s.opt.EntryID > 0 {
+		e, err = s.repo.GetEntry(s.opt.EntryID)
+	} else if s.opt.Addr != "" {
 		e, err = s.parseFuzzyAddr(s.opt.Addr)
 	} else if s.opt.Tag != "" {
 		e, err = s.getEntryByTag(s.opt.Tag)
@@ -217,7 +222,7 @@ func (s *SSX) parseFuzzyAddr(addr string) (*entry.Entry, error) {
 	return e, nil
 }
 
-func foundTargetByAddr(em map[string]*entry.Entry, host, username, port string) (hit *entry.Entry, candidates []*entry.Entry) {
+func foundTargetByAddr[T comparable](em map[T]*entry.Entry, host, username, port string) (hit *entry.Entry, candidates []*entry.Entry) {
 	for _, e := range em {
 		if !strings.Contains(e.Host, host) {
 			continue
@@ -251,7 +256,7 @@ func (s *SSX) getEntryByTag(tag string) (*entry.Entry, error) {
 	return s.selectEntry(candidates, "multiple entries found, select one")
 }
 
-func foundTargetByTag(em map[string]*entry.Entry, tagKeyword string) (candidates []*entry.Entry) {
+func foundTargetByTag[T comparable](em map[T]*entry.Entry, tagKeyword string) (candidates []*entry.Entry) {
 	for _, e := range em {
 		if len(e.Tags) == 0 {
 			continue
@@ -272,6 +277,9 @@ var templates = &promptui.SelectTemplates{
 }
 
 func (s *SSX) selectEntry(es []*entry.Entry, promptOption ...string) (*entry.Entry, error) {
+	if len(es) == 0 {
+		return nil, errmsg.ErrNoEntry
+	}
 	searcher := func(input string, index int) bool {
 		e := es[index]
 		content := fmt.Sprintf("%s %s", e.String(), strings.Join(e.Tags, " "))
@@ -304,8 +312,7 @@ func (s *SSX) ListEntries() error {
 		return err
 	}
 	if len(repoEntryMap) == 0 && len(s.sshEntryMap) == 0 {
-		fmt.Println("no entry found")
-		return nil
+		return errmsg.ErrNoEntry
 	}
 
 	if len(repoEntryMap) > 0 {
@@ -352,33 +359,65 @@ func (s *SSX) DeleteEntryByID(ids ...int) error {
 	if err != nil {
 		return err
 	}
-	var deleteMap = map[int]struct{}{}
+	var deleteMap = map[uint64]struct{}{}
 	for _, id := range ids {
-		deleteMap[id] = struct{}{}
+		deleteMap[uint64(id)] = struct{}{}
 	}
 	for _, e := range em {
-		if _, exist := deleteMap[int(e.ID)]; exist {
+		if _, exist := deleteMap[e.ID]; exist {
 			lg.Info("deleting %d ...", e.ID)
-			if deleteErr := s.repo.DeleteEntry(e.Host, e.User); deleteErr != nil {
+			if deleteErr := s.repo.DeleteEntry(e.ID); deleteErr != nil {
+				lg.Error("failed to delete entry %d", e.ID)
 				return deleteErr
 			}
+			lg.Info("entry %d deleted", e.ID)
 		}
 	}
-	lg.Info("delete successfully")
 	return nil
 }
 
-func (s *SSX) AppendTagByID(id int, tags ...string) error {
+func (s *SSX) DeleteTagByID(id int, tags ...string) error {
+	if len(tags) == 0 {
+		return nil
+	}
 	em, err := s.repo.GetAllEntries()
 	if err != nil {
 		return err
 	}
+	lg.Debug("deleting tags %s for id %d", tags, id)
 	for _, e := range em {
 		if int(e.ID) != id {
 			continue
 		}
-		e.Tags = append(e.Tags, tags...)
-		return s.repo.TouchEntry(e)
+		e.Tags = slice.Delete(e.Tags, tags...)
+		if err = s.repo.TouchEntry(e); err != nil {
+			return err
+		}
+		lg.Info("tags %s deleted", tags)
+		return nil
 	}
-	return errors.Errorf("not found entry: %d", id)
+	return errmsg.ErrEntryNotExist
+}
+
+func (s *SSX) AppendTagByID(id int, tags ...string) error {
+	if len(tags) == 0 {
+		return nil
+	}
+	em, err := s.repo.GetAllEntries()
+	if err != nil {
+		return err
+	}
+	lg.Debug("adding tags %s for id %d", tags, id)
+	for _, e := range em {
+		if int(e.ID) != id {
+			continue
+		}
+		e.Tags = slice.Union(e.Tags, tags)
+		if err = s.repo.TouchEntry(e); err != nil {
+			return err
+		}
+		lg.Info("tags %s added", tags)
+		return nil
+	}
+	return errmsg.ErrEntryNotExist
 }

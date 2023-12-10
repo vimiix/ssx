@@ -40,10 +40,6 @@ type Entry struct {
 	// TODO support jump server
 }
 
-func (e *Entry) UniqueKey() string {
-	return fmt.Sprintf("%s/%s", e.Host, e.User)
-}
-
 func (e *Entry) String() string {
 	return fmt.Sprintf("%s@%s:%s", e.User, e.Host, e.Port)
 }

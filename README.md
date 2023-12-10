@@ -10,7 +10,7 @@
     <img src="https://img.shields.io/badge/author-Vimiix-blue" /></a>
 </p>
 
-🦅 ssx is an ssh hunter.
+🦅 ssx is a retentive ssh client.
 
 It will automatically remember the server which login through it, 
 so you do not need to enter the password again when you log in again.
@@ -29,7 +29,7 @@ Download binary from [releases](https://github.com/vimiix/ssx/releases), extract
 ### Add a new entry
 
 ```bash
-ssx -s [USER@]HOST[:PORT] [-i IDENTIDY_FILE]
+ssx -s [USER@]HOST[:PORT] [-k IDENTITY_FILE]
 ```
 
 If given address matched an exist entry, ssx will login directly.
@@ -66,9 +66,28 @@ ssx list
 ### Tag an entry
 
 ```bash
-ssx tag -i <ENTRY_ID> -t TAG1 [-t TAG2 ...]
+ssx tag -i <ENTRY_ID> [-t TAG1 [-t TAG2 ...]] [-d TAG3 [-d TAG4 ...]]
 ```
 Once we tag the entry, we can log in through the tag later.
+
+### Login
+
+```bash
+# login by interacting, just run ssx
+ssx
+
+# login by entry id
+ssx -i <ID>
+
+# login by address, support partial words
+ssx -s <ADDRESS>
+
+# login by tag
+ssx -t <TAG>
+
+# If more than one flag of -i, -s ,-t specified, 
+# priority is ENTRY_ID > ADDRESS > TAG_NAME
+```
 
 ### Delete an entry
 
