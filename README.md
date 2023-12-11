@@ -7,12 +7,12 @@
     <a href="https://github.com/vimiix/ssx/blob/main/LICENSE" alt="license">
     <img src="https://img.shields.io/badge/License-MIT-jasper" /></a>
     <a href="https://github.com/vimiix" alt="author">
-    <img src="https://img.shields.io/badge/author-Vimiix-blue" /></a>
+    <img src="https://img.shields.io/badge/Author-Vimiix-blue" /></a>
 </p>
 
 🦅 ssx is a retentive ssh client.
 
-It will automatically remember the server which login through it, 
+It will automatically remember the server which login through it,
 so you do not need to enter the password again when you log in again.
 
 <p align="center">
@@ -46,7 +46,7 @@ ssx list
 ```
 
 ssx does not read `~/.ssh/config` by default unless the environment variable `SSX_IMPORT_SSH_CONFIG` is set.
-ssx will not store user ssh config entries to itself db, so you won't see their `ID` in the output of the list command 
+ssx will not store user ssh config entries to itself db, so you won't see their `ID` in the output of the list command
 
 ```bash
 export SSX_IMPORT_SSH_CONFIG=true
@@ -68,6 +68,7 @@ ssx list
 ```bash
 ssx tag -i <ENTRY_ID> [-t TAG1 [-t TAG2 ...]] [-d TAG3 [-d TAG4 ...]]
 ```
+
 Once we tag the entry, we can log in through the tag later.
 
 ### Login
