@@ -10,6 +10,7 @@ func newDeleteCmd() *cobra.Command {
 	var ids []int
 	cmd := &cobra.Command{
 		Use:     "delete",
+		Aliases: []string{"d", "del"},
 		Short:   "delete entry by id",
 		Example: "ssx delete -i1 [-i2 ...]",
 		RunE: func(cmd *cobra.Command, args []string) error {

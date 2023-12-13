@@ -13,6 +13,7 @@ func newTagCmd() *cobra.Command {
 	)
 	cmd := &cobra.Command{
 		Use:     "tag",
+		Aliases: []string{"t"},
 		Short:   "add or delete tag for entry by id",
 		Example: "ssx tag -i <ENTRY_ID> [-t TAG1 [-t TAG2 ...]] [-d TAG3 [-d TAG4 ...]]",
 		RunE: func(cmd *cobra.Command, args []string) error {
