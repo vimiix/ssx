@@ -28,6 +28,7 @@ ssx [-i ENTRY_ID] [-s [USER@]HOST[:PORT]] [-k IDENTITY_FILE] [-t TAG_NAME]`,
 		SilenceErrors:      true,
 		DisableAutoGenTag:  true,
 		DisableSuggestions: true,
+		Args:               cobra.ArbitraryArgs, // accept arbitrary args for supporting quick login
 		PersistentPreRunE: func(cmd *cobra.Command, args []string) error {
 			lg.SetVerbose(logVerbose)
 			if !printVersion {
@@ -43,6 +44,10 @@ ssx [-i ENTRY_ID] [-s [USER@]HOST[:PORT]] [-k IDENTITY_FILE] [-t TAG_NAME]`,
 			if printVersion {
 				fmt.Fprintln(os.Stdout, version.Detail())
 				return nil
+			}
+			if len(args) > 0 {
+				// just use first word as search key
+				opt.Keyword = args[0]
 			}
 			return ssxInst.Main(cmd.Context())
 		},

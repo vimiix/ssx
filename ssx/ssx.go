@@ -32,6 +32,7 @@ type CmdOption struct {
 	Addr         string
 	Tag          string
 	IdentityFile string
+	Keyword      string
 }
 
 // Tidy complete unset fields with default values
@@ -142,7 +143,9 @@ func (s *SSX) Main(ctx context.Context) error {
 		e   *entry.Entry
 		err error
 	)
-	if s.opt.EntryID > 0 {
+	if s.opt.Keyword != "" {
+		e, err = s.searchEntry(s.opt.Keyword)
+	} else if s.opt.EntryID > 0 {
 		e, err = s.repo.GetEntry(s.opt.EntryID)
 	} else if s.opt.Addr != "" {
 		e, err = s.parseFuzzyAddr(s.opt.Addr)
@@ -158,7 +161,7 @@ func (s *SSX) Main(ctx context.Context) error {
 	return NewClient(e, s.repo).Run(ctx)
 }
 
-func (s *SSX) selectEntryFromAll() (*entry.Entry, error) {
+func (s *SSX) getAllEntries() ([]*entry.Entry, error) {
 	var es []*entry.Entry
 	em, err := s.repo.GetAllEntries()
 	if err != nil {
@@ -171,6 +174,52 @@ func (s *SSX) selectEntryFromAll() (*entry.Entry, error) {
 		for _, e := range s.sshEntryMap {
 			es = append(es, e)
 		}
+	}
+	return es, nil
+}
+
+// search by host and tag first, if not found, then connect as a new entry
+func (s *SSX) searchEntry(keyword string) (*entry.Entry, error) {
+	es, err := s.getAllEntries()
+	if err != nil {
+		return nil, err
+	}
+	var candidates []*entry.Entry
+	for _, e := range es {
+		if strings.Contains(e.Host, keyword) ||
+			strings.Contains(strings.Join(e.Tags, " "), keyword) {
+			candidates = append(candidates, e)
+		}
+	}
+	if len(candidates) == 1 {
+		return candidates[0], nil
+	}
+	if len(candidates) > 1 {
+		return s.selectEntry(candidates)
+	}
+	lg.Debug("not found by keyword %q, treat it as new entry", keyword)
+	matches := addrRegex.FindStringSubmatch(keyword)
+	if len(matches) == 0 {
+		return nil, errors.Errorf("invalid address: %s", keyword)
+	}
+	username, host, port := matches[1], matches[2], matches[3]
+	e := &entry.Entry{
+		Host:    host,
+		User:    username,
+		Port:    port,
+		KeyPath: s.opt.IdentityFile,
+		Source:  entry.SourceSSXStore,
+	}
+	if err = e.Tidy(); err != nil {
+		return nil, err
+	}
+	return e, nil
+}
+
+func (s *SSX) selectEntryFromAll() (*entry.Entry, error) {
+	es, err := s.getAllEntries()
+	if err != nil {
+		return nil, err
 	}
 	return s.selectEntry(es)
 }
