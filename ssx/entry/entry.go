@@ -3,7 +3,6 @@ package entry
 import (
 	"bufio"
 	"fmt"
-	"log"
 	"net"
 	"os"
 	"os/user"
@@ -105,9 +104,9 @@ func (e *Entry) sshHostKeyCallback() (ssh.HostKeyCallback, error) {
 				ferr = knownhosts.WriteKnownHost(f, hostname, remote, key)
 			}
 			if ferr == nil {
-				log.Printf("Added host %s to known_hosts\n", hostname)
+				lg.Info("added host %s to known_hosts", hostname)
 			} else {
-				log.Printf("Failed to add host %s to known_hosts: %v\n", hostname, ferr)
+				lg.Warn("failed to add host %s to known_hosts: %v", hostname, ferr)
 			}
 			return nil
 		}
