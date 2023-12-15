@@ -3,11 +3,15 @@ package entry
 import (
 	"bufio"
 	"fmt"
+	"log"
+	"net"
 	"os"
 	"os/user"
 	"path/filepath"
 	"time"
 
+	"github.com/pkg/errors"
+	"github.com/skeema/knownhosts"
 	"golang.org/x/crypto/ssh"
 
 	"github.com/vimiix/ssx/internal/lg"
@@ -58,15 +62,58 @@ func getConnectTimeout() time.Duration {
 	return d
 }
 
-func (e *Entry) GenSSHConfig() *ssh.ClientConfig {
+func (e *Entry) GenSSHConfig() (*ssh.ClientConfig, error) {
+	cb, err := e.sshHostKeyCallback()
+	if err != nil {
+		return nil, err
+	}
 	cfg := &ssh.ClientConfig{
 		User:            e.User,
 		Auth:            e.AuthMethods(),
-		HostKeyCallback: ssh.InsecureIgnoreHostKey(),
+		HostKeyCallback: cb,
 		Timeout:         getConnectTimeout(),
 	}
 	cfg.SetDefaults()
-	return cfg
+	return cfg, nil
+}
+
+func (e *Entry) sshHostKeyCallback() (ssh.HostKeyCallback, error) {
+	khPath := utils.ExpandHomeDir("~/.ssh/known_hosts")
+	if !utils.FileExists(khPath) {
+		f, err := os.OpenFile(khPath, os.O_RDWR|os.O_CREATE, 0600)
+		if err != nil {
+			return nil, err
+		}
+		_ = f.Close()
+	}
+	kh, err := knownhosts.New(khPath)
+	if err != nil {
+		lg.Error("failed to read known_hosts: ", err)
+		return nil, err
+	}
+	// Create a custom permissive hostkey callback which still errors on hosts
+	// with changed keys, but allows unknown hosts and adds them to known_hosts
+	cb := ssh.HostKeyCallback(func(hostname string, remote net.Addr, key ssh.PublicKey) error {
+		err := kh(hostname, remote, key)
+		if knownhosts.IsHostKeyChanged(err) {
+			lg.Error("REMOTE HOST IDENTIFICATION HAS CHANGED for host %s! This may indicate a MitM attack.", hostname)
+			return errors.Errorf("host key changed for host %s", hostname)
+		} else if knownhosts.IsHostUnknown(err) {
+			f, ferr := os.OpenFile(khPath, os.O_APPEND|os.O_WRONLY, 0600)
+			if ferr == nil {
+				defer f.Close()
+				ferr = knownhosts.WriteKnownHost(f, hostname, remote, key)
+			}
+			if ferr == nil {
+				log.Printf("Added host %s to known_hosts\n", hostname)
+			} else {
+				log.Printf("Failed to add host %s to known_hosts: %v\n", hostname, ferr)
+			}
+			return nil
+		}
+		return err
+	})
+	return cb, nil
 }
 
 func (e *Entry) Tidy() error {

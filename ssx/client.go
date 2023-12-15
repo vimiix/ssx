@@ -153,7 +153,10 @@ func dialContext(ctx context.Context, network, addr string, config *ssh.ClientCo
 func (c *Client) login(ctx context.Context) error {
 	network := "tcp"
 	addr := net.JoinHostPort(c.entry.Host, c.entry.Port)
-	clientConfig := c.entry.GenSSHConfig()
+	clientConfig, err := c.entry.GenSSHConfig()
+	if err != nil {
+		return err
+	}
 	lg.Info("connecting to %s", c.entry.String())
 	cli, err := dialContext(ctx, network, addr, clientConfig)
 	if err == nil {
