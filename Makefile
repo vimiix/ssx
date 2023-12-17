@@ -9,6 +9,7 @@ LDFLAGS += -X "$(REPO)/ssx/version.Revision=$(COMMIT)"
 LDFLAGS += -X "$(REPO)/ssx/version.BuildDate=$(BUILDDATE)"
 LDFLAGS += $(EXTRA_LDFLAGS)
 FILES   := $$(find . -name "*.go")
+TEST_FILES   := $$(go list ./...)
 
 .PHONY: help
 help: ## print help info
@@ -33,6 +34,10 @@ fmt: ## format source code
 lint: tidy fmt ## lint code with golangci-lint
 	$([[ command -v golangci-lint ]] || go install github.com/golangci/golangci-lint/cmd/golangci-lint@v1.51.1)
 	@golangci-lint run -v
+
+.PHONY: test
+test: ## run all unit tests
+	$(GO) test -gcflags=all=-l $(TEST_FILES) -coverprofile dist/cov.out -covermode count
 
 .PHONY: ssx
 ssx: lint ## build ssx binary
