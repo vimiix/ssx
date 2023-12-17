@@ -3,6 +3,7 @@ module github.com/vimiix/ssx
 go 1.19
 
 require (
+	github.com/containerd/console v1.0.3
 	github.com/fatih/color v1.16.0
 	github.com/kevinburke/ssh_config v1.2.0
 	github.com/manifoldco/promptui v0.9.0

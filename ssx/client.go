@@ -11,8 +11,8 @@ import (
 	"time"
 
 	"golang.org/x/crypto/ssh"
-	"golang.org/x/term"
 
+	"github.com/containerd/console"
 	"github.com/vimiix/ssx/internal/lg"
 	"github.com/vimiix/ssx/internal/terminal"
 	"github.com/vimiix/ssx/ssx/entry"
@@ -64,14 +64,14 @@ func (c *Client) Run(ctx context.Context) error {
 }
 
 func (c *Client) attach(ctx context.Context, sess *ssh.Session) error {
-	fd := int(os.Stdin.Fd())
-	state, err := term.MakeRaw(fd)
-	if err != nil {
+	current := console.Current()
+	defer func() {
+		_ = current.Reset()
+	}()
+
+	if err := current.SetRaw(); err != nil {
 		return err
 	}
-	defer func() {
-		_ = term.Restore(fd, state)
-	}()
 
 	w, h, err := terminal.GetAndWatchWindowSize(ctx, sess)
 	if err != nil {
