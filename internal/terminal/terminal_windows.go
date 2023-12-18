@@ -13,7 +13,7 @@ import (
 	"github.com/vimiix/ssx/internal/lg"
 )
 
-func ReadPassword() ([]byte, error) {
+func readPassword() ([]byte, error) {
 	return term.ReadPassword(int(windows.Stdin))
 }
 

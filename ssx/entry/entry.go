@@ -2,6 +2,7 @@ package entry
 
 import (
 	"bufio"
+	"context"
 	"fmt"
 	"net"
 	"os"
@@ -61,14 +62,14 @@ func getConnectTimeout() time.Duration {
 	return d
 }
 
-func (e *Entry) GenSSHConfig() (*ssh.ClientConfig, error) {
+func (e *Entry) GenSSHConfig(ctx context.Context) (*ssh.ClientConfig, error) {
 	cb, err := e.sshHostKeyCallback()
 	if err != nil {
 		return nil, err
 	}
 	cfg := &ssh.ClientConfig{
 		User:            e.User,
-		Auth:            e.AuthMethods(),
+		Auth:            e.AuthMethods(ctx),
 		HostKeyCallback: cb,
 		Timeout:         getConnectTimeout(),
 	}
@@ -133,7 +134,7 @@ func (e *Entry) Tidy() error {
 }
 
 // AuthMethods all possible auth methods
-func (e *Entry) AuthMethods() []ssh.AuthMethod {
+func (e *Entry) AuthMethods(ctx context.Context) []ssh.AuthMethod {
 	var authMethods []ssh.AuthMethod
 	// password auth
 	if e.Password != "" {
@@ -146,11 +147,11 @@ func (e *Entry) AuthMethods() []ssh.AuthMethod {
 		authMethods = append(authMethods, keyfileAuths...)
 	}
 
-	authMethods = append(authMethods, e.interactAuth())
+	authMethods = append(authMethods, e.interactAuth(ctx))
 	return authMethods
 }
 
-func (e *Entry) interactAuth() ssh.AuthMethod {
+func (e *Entry) interactAuth(ctx context.Context) ssh.AuthMethod {
 	return ssh.KeyboardInteractive(func(name, instruction string, questions []string, echos []bool) (answers []string, err error) {
 		answers = make([]string, 0, len(questions))
 		for i, q := range questions {
@@ -164,7 +165,7 @@ func (e *Entry) interactAuth() ssh.AuthMethod {
 					return nil, err
 				}
 			} else {
-				b, err := terminal.ReadPassword()
+				b, err := terminal.ReadPassword(ctx)
 				if err != nil {
 					return nil, err
 				}

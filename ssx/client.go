@@ -13,6 +13,7 @@ import (
 	"golang.org/x/crypto/ssh"
 
 	"github.com/containerd/console"
+
 	"github.com/vimiix/ssx/internal/lg"
 	"github.com/vimiix/ssx/internal/terminal"
 	"github.com/vimiix/ssx/ssx/entry"
@@ -153,7 +154,7 @@ func dialContext(ctx context.Context, network, addr string, config *ssh.ClientCo
 func (c *Client) login(ctx context.Context) error {
 	network := "tcp"
 	addr := net.JoinHostPort(c.entry.Host, c.entry.Port)
-	clientConfig, err := c.entry.GenSSHConfig()
+	clientConfig, err := c.entry.GenSSHConfig(ctx)
 	if err != nil {
 		return err
 	}
@@ -166,13 +167,13 @@ func (c *Client) login(ctx context.Context) error {
 
 	if strings.Contains(err.Error(), "no supported methods remain") {
 		fmt.Printf("%s@%s's password:", c.entry.User, c.entry.Host)
-		bs, readErr := terminal.ReadPassword()
+		bs, readErr := terminal.ReadPassword(ctx)
+		fmt.Println()
 		if readErr == nil {
 			p := string(bs)
 			if p != "" {
 				clientConfig.Auth = []ssh.AuthMethod{ssh.Password(p)}
 			}
-			fmt.Println()
 			cli, err = ssh.Dial(network, addr, clientConfig)
 			if err == nil {
 				c.entry.Password = p
