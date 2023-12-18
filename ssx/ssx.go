@@ -186,7 +186,7 @@ func (s *SSX) searchEntry(keyword string) (*entry.Entry, error) {
 	}
 	var candidates []*entry.Entry
 	for _, e := range es {
-		if strings.Contains(e.Host, keyword) ||
+		if strings.Contains(e.String(), keyword) ||
 			strings.Contains(strings.Join(e.Tags, " "), keyword) {
 			candidates = append(candidates, e)
 		}
@@ -212,6 +212,12 @@ func (s *SSX) searchEntry(keyword string) (*entry.Entry, error) {
 	}
 	if err = e.Tidy(); err != nil {
 		return nil, err
+	}
+	for _, exist := range es {
+		if exist.String() == e.String() {
+			lg.Debug("found exist entry: %s", exist.String())
+			return exist, nil
+		}
 	}
 	return e, nil
 }
