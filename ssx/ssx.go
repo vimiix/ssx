@@ -207,7 +207,7 @@ func (s *SSX) searchEntry(keyword string) (*entry.Entry, error) {
 		Host:    host,
 		User:    username,
 		Port:    port,
-		KeyPath: s.opt.IdentityFile,
+		KeyPath: utils.ExpandHomeDir(s.opt.IdentityFile),
 		Source:  entry.SourceSSXStore,
 	}
 	if err = e.Tidy(); err != nil {

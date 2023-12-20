@@ -67,9 +67,13 @@ func (e *Entry) GenSSHConfig(ctx context.Context) (*ssh.ClientConfig, error) {
 	if err != nil {
 		return nil, err
 	}
+	auths, err := e.AuthMethods(ctx)
+	if err != nil {
+		return nil, err
+	}
 	cfg := &ssh.ClientConfig{
 		User:            e.User,
-		Auth:            e.AuthMethods(ctx),
+		Auth:            auths,
 		HostKeyCallback: cb,
 		Timeout:         getConnectTimeout(),
 	}
@@ -128,13 +132,13 @@ func (e *Entry) Tidy() error {
 		e.Port = "22"
 	}
 	if e.KeyPath == "" {
-		e.KeyPath = defaultIdentityFile
+		e.KeyPath = utils.ExpandHomeDir(defaultIdentityFile)
 	}
 	return nil
 }
 
 // AuthMethods all possible auth methods
-func (e *Entry) AuthMethods(ctx context.Context) []ssh.AuthMethod {
+func (e *Entry) AuthMethods(ctx context.Context) ([]ssh.AuthMethod, error) {
 	var authMethods []ssh.AuthMethod
 	// password auth
 	if e.Password != "" {
@@ -142,13 +146,16 @@ func (e *Entry) AuthMethods(ctx context.Context) []ssh.AuthMethod {
 	}
 
 	// key file auth methods
-	keyfileAuths := e.privateKeyAuthMethods()
+	keyfileAuths, err := e.privateKeyAuthMethods(ctx)
+	if err != nil {
+		return nil, err
+	}
 	if len(keyfileAuths) > 0 {
 		authMethods = append(authMethods, keyfileAuths...)
 	}
 
 	authMethods = append(authMethods, e.interactAuth(ctx))
-	return authMethods
+	return authMethods, nil
 }
 
 func (e *Entry) interactAuth(ctx context.Context) ssh.AuthMethod {
@@ -177,45 +184,67 @@ func (e *Entry) interactAuth(ctx context.Context) ssh.AuthMethod {
 	})
 }
 
-func (e *Entry) privateKeyAuthMethods() []ssh.AuthMethod {
+func (e *Entry) privateKeyAuthMethods(ctx context.Context) ([]ssh.AuthMethod, error) {
 	keyfiles := e.collectKeyfiles()
 	if len(keyfiles) == 0 {
-		return nil
+		return nil, nil
 	}
 	var methods []ssh.AuthMethod
 	for _, f := range keyfiles {
-		auth := e.keyfileAuth(f)
+		auth, err := e.keyfileAuth(ctx, f)
+		if err != nil {
+			return nil, err
+		}
 		if auth != nil {
 			methods = append(methods, auth)
 		}
 	}
-	return methods
+	return methods, nil
 }
 
-func (e *Entry) keyfileAuth(keypath string) ssh.AuthMethod {
+func (e *Entry) keyfileAuth(ctx context.Context, keypath string) (ssh.AuthMethod, error) {
+	lg.Debug("parsing key file: %s", keypath)
 	pemBytes, err := os.ReadFile(keypath)
 	if err != nil {
-		lg.Debug("generate rsaAuth: failed to read file %q: %s", keypath, err)
-		return nil
+		lg.Error("failed to read file %q: %s", keypath, err)
+		return nil, err
 	}
 	var signer ssh.Signer
-	if e.Passphrase == "" {
-		signer, err = ssh.ParsePrivateKey(pemBytes)
-	} else {
-		signer, err = ssh.ParsePrivateKeyWithPassphrase(pemBytes, []byte(e.Passphrase))
+	signer, err = ssh.ParsePrivateKey(pemBytes)
+	passphraseMissingError := &ssh.PassphraseMissingError{}
+	if err != nil {
+		if keypath != e.KeyPath {
+			lg.Debug("parse failed, ignore keyfile %q", keypath)
+			return nil, nil
+		}
+		if errors.As(err, &passphraseMissingError) {
+			if e.Passphrase != "" {
+				signer, err = ssh.ParsePrivateKeyWithPassphrase(pemBytes, []byte(e.Passphrase))
+			} else {
+				fmt.Print("please enter passphrase of key file:")
+				bs, readErr := terminal.ReadPassword(ctx)
+				fmt.Println()
+				if readErr != nil {
+					return nil, readErr
+				}
+				// write back to entry instance
+				e.Passphrase = string(bs)
+				signer, err = ssh.ParsePrivateKeyWithPassphrase(pemBytes, bs)
+			}
+		}
 	}
 	if err != nil {
-		lg.Debug("generate rsaAuth: %s", err)
-		return nil
+		lg.Error("failed to parse private key file: %s", err)
+		return nil, err
 	}
-	return ssh.PublicKeys(signer)
+	return ssh.PublicKeys(signer), nil
 }
 
 // defaultRSAKeyFiles List of possible key files
 // The order of the list represents the priority
 var defaultRSAKeyFiles = []string{
 	"id_rsa", "id_ecdsa", "id_ecdsa_sk",
-	"id_ed25519", "id_ed25519_sk", "id_rsa",
+	"id_ed25519", "id_ed25519_sk",
 }
 
 func (e *Entry) collectKeyfiles() []string {
@@ -230,7 +259,7 @@ func (e *Entry) collectKeyfiles() []string {
 	}
 	for _, fn := range defaultRSAKeyFiles {
 		fp := filepath.Join(u.HomeDir, ".ssh", fn)
-		if fp == e.KeyPath || !utils.FileExists(fp) {
+		if fp == utils.ExpandHomeDir(e.KeyPath) || !utils.FileExists(fp) {
 			continue
 		}
 		keypaths = append(keypaths, fp)

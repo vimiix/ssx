@@ -26,6 +26,14 @@ so you do not need to enter the password again when you log in again.
 
 Download binary from [releases](https://github.com/vimiix/ssx/releases), extract it and add its path to your `$PATH` list.
 
+If you want to install from source code, you can run command under project root directory:
+
+```bash
+make ssx
+```
+
+then you can get ssx binary in **dist** directory.
+
 ### Add a new entry
 
 ```bash

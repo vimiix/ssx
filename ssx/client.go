@@ -166,6 +166,7 @@ func (c *Client) login(ctx context.Context) error {
 	}
 
 	if strings.Contains(err.Error(), "no supported methods remain") {
+		lg.Debug("failed login by default auth methods, try password again")
 		fmt.Printf("%s@%s's password:", c.entry.User, c.entry.Host)
 		bs, readErr := terminal.ReadPassword(ctx)
 		fmt.Println()
