@@ -7,6 +7,7 @@ import (
 
 	"go.etcd.io/bbolt"
 
+	"github.com/vimiix/ssx/internal/encrypt"
 	"github.com/vimiix/ssx/internal/errmsg"
 	"github.com/vimiix/ssx/internal/lg"
 	"github.com/vimiix/ssx/ssx/entry"
@@ -82,9 +83,9 @@ func (r *Repo) TouchEntry(e *entry.Entry) error {
 			e.UpdateAt = time.Now()
 		}
 		// update
-		buf, marshalErr := json.Marshal(e)
-		if marshalErr != nil {
-			return marshalErr
+		buf, encodeErr := encodeEntry(e)
+		if encodeErr != nil {
+			return encodeErr
 		}
 		return b.Put(itob(e.ID), buf)
 	})
@@ -125,11 +126,11 @@ func (r *Repo) GetAllEntries() (map[uint64]*entry.Entry, error) {
 		b := tx.Bucket(r.entryBucket)
 		c := b.Cursor()
 		for k, v := c.First(); k != nil; k, v = c.Next() {
-			var t = entry.Entry{}
-			if unmarshalErr := json.Unmarshal(v, &t); unmarshalErr != nil {
-				return unmarshalErr
+			e, decodeErr := decodeEntry(v)
+			if decodeErr != nil {
+				return decodeErr
 			}
-			m[t.ID] = &t
+			m[e.ID] = e
 		}
 		return nil
 	})
@@ -196,4 +197,20 @@ func NewRepo(file string) *Repo {
 		metaBucket:  []byte("metadata"),
 		entryBucket: []byte("entries"),
 	}
+}
+
+func encodeEntry(e *entry.Entry) ([]byte, error) {
+	e.Password = encrypt.Encrypt(e.Password)
+	e.Passphrase = encrypt.Encrypt(e.Passphrase)
+	return json.Marshal(e)
+}
+
+func decodeEntry(bs []byte) (*entry.Entry, error) {
+	var e = &entry.Entry{}
+	if err := json.Unmarshal(bs, e); err != nil {
+		return nil, err
+	}
+	e.Password = encrypt.Decrypt(e.Password)
+	e.Passphrase = encrypt.Decrypt(e.Passphrase)
+	return e, nil
 }

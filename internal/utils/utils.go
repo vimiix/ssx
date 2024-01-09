@@ -30,3 +30,14 @@ func ExpandHomeDir(path string) string {
 
 	return filepath.Join(u.HomeDir, path[1:])
 }
+
+func MaskString(s string) string {
+	mask := "***"
+	if len(s) == 0 {
+		return s
+	} else if len(s) <= 3 {
+		return s[:1] + mask
+	} else {
+		return s[:2] + mask + s[len(s)-1:]
+	}
+}

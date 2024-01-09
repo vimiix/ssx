@@ -50,3 +50,21 @@ func TestExpandHomeDir(t *testing.T) {
 		})
 	}
 }
+
+func TestMaskString(t *testing.T) {
+	tests := []struct {
+		s      string
+		expect string
+	}{
+		{"", ""},
+		{"a", "a***"},
+		{"ab", "a***"},
+		{"abc", "a***"},
+		{"abcd", "ab***d"},
+		{"abcdefgh", "ab***h"},
+	}
+	for _, tt := range tests {
+		actual := MaskString(tt.s)
+		assert.Equal(t, tt.expect, actual)
+	}
+}
