@@ -335,6 +335,9 @@ func (s *SSX) selectEntry(es []*entry.Entry, promptOption ...string) (*entry.Ent
 	if len(es) == 0 {
 		return nil, errmsg.ErrNoEntry
 	}
+	sort.Slice(es, func(i, j int) bool {
+		return es[i].ID < es[j].ID
+	})
 	searcher := func(input string, index int) bool {
 		e := es[index]
 		content := fmt.Sprintf("%s %s", e.String(), strings.Join(e.Tags, " "))
