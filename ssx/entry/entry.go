@@ -122,11 +122,11 @@ func (e *Entry) sshHostKeyCallback() (ssh.HostKeyCallback, error) {
 
 func (e *Entry) Tidy() error {
 	if len(e.User) <= 0 {
-		curUser, err := user.Current()
+		curUsername, err := utils.CurrentUserName()
 		if err != nil {
 			return err
 		}
-		e.User = curUser.Username
+		e.User = curUsername
 	}
 	if len(e.Port) <= 0 {
 		e.Port = "22"

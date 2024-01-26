@@ -41,3 +41,12 @@ func MaskString(s string) string {
 		return s[:2] + mask + s[len(s)-1:]
 	}
 }
+
+// CurrentUserName returns the UserName of the current os user
+func CurrentUserName() (string, error) {
+	user, err := user.Current()
+	if err != nil {
+		return "", err
+	}
+	return user.Username, nil
+}
