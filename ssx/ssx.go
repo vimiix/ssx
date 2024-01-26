@@ -11,6 +11,7 @@ import (
 	"sort"
 	"strconv"
 	"strings"
+	"time"
 
 	"github.com/kevinburke/ssh_config"
 	"github.com/manifoldco/promptui"
@@ -33,6 +34,8 @@ type CmdOption struct {
 	Tag          string
 	IdentityFile string
 	Keyword      string
+	Command      string
+	Timeout      time.Duration
 }
 
 // Tidy complete unset fields with default values
@@ -158,7 +161,18 @@ func (s *SSX) Main(ctx context.Context) error {
 		return err
 	}
 
-	return NewClient(e, s.repo).Run(ctx)
+	client := NewClient(e, s.repo)
+	if len(s.opt.Command) > 0 {
+		opt := &ExecuteOption{
+			Command: s.opt.Command,
+			Stdout:  os.Stdout,
+			Stderr:  os.Stderr,
+			Timeout: s.opt.Timeout,
+		}
+		return client.Execute(ctx, opt)
+	}
+
+	return client.Interact(ctx)
 }
 
 func (s *SSX) getAllEntries() ([]*entry.Entry, error) {

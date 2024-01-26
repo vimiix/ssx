@@ -10,9 +10,8 @@ import (
 	"sync"
 	"time"
 
-	"golang.org/x/crypto/ssh"
-
 	"github.com/containerd/console"
+	"golang.org/x/crypto/ssh"
 
 	"github.com/vimiix/ssx/internal/lg"
 	"github.com/vimiix/ssx/internal/terminal"
@@ -41,15 +40,44 @@ func (c *Client) touchEntry(e *entry.Entry) error {
 	return c.repo.TouchEntry(e)
 }
 
-func (c *Client) Run(ctx context.Context) error {
-	if err := c.login(ctx); err != nil {
+type ExecuteOption struct {
+	Command string
+	Stdout  io.Writer
+	Stderr  io.Writer
+	Timeout time.Duration
+}
+
+// Execute a command combined stdout and stderr output, then exit
+func (c *Client) Execute(ctx context.Context, opt *ExecuteOption) error {
+	if opt.Timeout > 0 {
+		var cancel context.CancelFunc
+		ctx, cancel = context.WithTimeout(ctx, opt.Timeout)
+		defer cancel()
+	}
+
+	if err := c.Login(ctx); err != nil {
 		return err
 	}
 	defer c.close()
 
-	if err := c.touchEntry(c.entry); err != nil {
+	sess, err := c.cli.NewSession()
+	if err != nil {
 		return err
 	}
+	defer sess.Close()
+
+	sess.Stdout = opt.Stdout
+	sess.Stderr = opt.Stderr
+	return sess.Run(opt.Command)
+}
+
+// Interact Bind the current terminal to provide an interactive interface
+func (c *Client) Interact(ctx context.Context) error {
+	if err := c.Login(ctx); err != nil {
+		return err
+	}
+	defer c.close()
+
 	lg.Info("connected server %s, version: %s",
 		c.entry.String(), string(c.cli.ServerVersion()))
 
@@ -151,14 +179,25 @@ func dialContext(ctx context.Context, network, addr string, config *ssh.ClientCo
 	return ssh.NewClient(c, chans, reqs), nil
 }
 
-func (c *Client) login(ctx context.Context) error {
+// Login connect remote server and touch enrty in storage
+func (c *Client) Login(ctx context.Context) error {
+	if err := c.connect(ctx); err != nil {
+		return err
+	}
+	if err := c.touchEntry(c.entry); err != nil {
+		lg.Error("failed to touch entry: %s", err)
+	}
+	return nil
+}
+
+func (c *Client) connect(ctx context.Context) error {
 	network := "tcp"
 	addr := net.JoinHostPort(c.entry.Host, c.entry.Port)
 	clientConfig, err := c.entry.GenSSHConfig(ctx)
 	if err != nil {
 		return err
 	}
-	lg.Info("connecting to %s", c.entry.String())
+	lg.Debug("connecting to %s", c.entry.String())
 	cli, err := dialContext(ctx, network, addr, clientConfig)
 	if err == nil {
 		c.cli = cli
@@ -166,7 +205,7 @@ func (c *Client) login(ctx context.Context) error {
 	}
 
 	if strings.Contains(err.Error(), "no supported methods remain") {
-		lg.Debug("failed login by default auth methods, try password again")
+		lg.Debug("failed connect by default auth methods, try password again")
 		fmt.Printf("%s@%s's password:", c.entry.User, c.entry.Host)
 		bs, readErr := terminal.ReadPassword(ctx)
 		fmt.Println()

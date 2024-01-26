@@ -3,6 +3,7 @@ package cmd
 import (
 	"fmt"
 	"os"
+	"strings"
 
 	"github.com/spf13/cobra"
 
@@ -23,7 +24,22 @@ func NewRoot() *cobra.Command {
 		Use:   "ssx",
 		Short: "🦅 ssx is a retentive ssh client",
 		Example: `# If more than one flag of -i, -s ,-t specified, priority is ENTRY_ID > ADDRESS > TAG_NAME
-ssx [-i ENTRY_ID] [-s [USER@]HOST[:PORT]] [-k IDENTITY_FILE] [-t TAG_NAME]`,
+ssx [-i ENTRY_ID] [-s [USER@]HOST[:PORT]] [-k IDENTITY_FILE] [-t TAG_NAME]
+
+# You can also skip the parameters and log in directly with host or tag
+ssx [USER@]HOST[:PORT]
+ssx TAG_NAME
+
+# Fuzzy search is also supported
+# For example, you want to login to 192.168.1.100 and
+# suppose you can uniquely locate one entry by '100',
+# you just need to enter:
+ssx 100
+
+# If a command is specified, it will be executed on the remote host instead of a login shell.
+ssx 100 -c pwd
+# if the '-c' is omitted, the secend and subsequent arguments will be treated as COMMAND
+ssx 100 pwd`,
 		SilenceUsage:       true,
 		SilenceErrors:      true,
 		DisableAutoGenTag:  true,
@@ -49,6 +65,9 @@ ssx [-i ENTRY_ID] [-s [USER@]HOST[:PORT]] [-k IDENTITY_FILE] [-t TAG_NAME]`,
 				// just use first word as search key
 				opt.Keyword = args[0]
 			}
+			if len(args) > 1 && len(opt.Command) == 0 {
+				opt.Command = strings.Join(args[1:], " ")
+			}
 			return ssxInst.Main(cmd.Context())
 		},
 	}
@@ -57,6 +76,8 @@ ssx [-i ENTRY_ID] [-s [USER@]HOST[:PORT]] [-k IDENTITY_FILE] [-t TAG_NAME]`,
 	root.Flags().StringVarP(&opt.Addr, "server", "s", "", "target server address\nsupport formats: [user@]host[:port]")
 	root.Flags().StringVarP(&opt.Tag, "tag", "t", "", "search entry by tag")
 	root.Flags().StringVarP(&opt.IdentityFile, "keyfile", "k", "", "identity_file path")
+	root.Flags().StringVarP(&opt.Command, "cmd", "c", "", "the command to execute\nssh connection will exit after the execution complete")
+	root.Flags().DurationVar(&opt.Timeout, "timeout", 0, "timeout for connecting and executing command")
 
 	root.PersistentFlags().BoolVarP(&printVersion, "version", "v", false, "print ssx version")
 	root.PersistentFlags().BoolVar(&logVerbose, "verbose", false, "output detail logs")
