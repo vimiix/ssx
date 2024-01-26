@@ -101,6 +101,16 @@ ssx [-s] <ADDRESS>
 ssx [-t] <TAG>
 ```
 
+### Execute command
+
+```bash
+ssx <ADDRESS> [-c] <COMMAND> [--timeout 30s]
+ssx <TAG> [-c] <COMMAND> [--timeout 30s]
+
+# for example: login 192.168.1.100 and execute command 'pwd':
+ssx 1.100 pwd
+```
+
 ### Delete an entry
 
 ```bash
