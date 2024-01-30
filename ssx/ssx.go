@@ -481,6 +481,17 @@ func (s *SSX) AppendTagByID(id int, tags ...string) error {
 	if len(tags) == 0 {
 		return nil
 	}
+	var reserved []string
+	for _, tag := range tags {
+		if isReservedWord(tag) {
+			reserved = append(reserved, tag)
+		}
+	}
+	if len(reserved) > 0 {
+		return fmt.Errorf("can not contain reserved words: %s\nsee also %s",
+			reserved, "https://github.com/vimiix/ssx/issues/14")
+	}
+
 	em, err := s.repo.GetAllEntries()
 	if err != nil {
 		return err
