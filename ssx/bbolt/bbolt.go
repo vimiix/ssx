@@ -91,7 +91,7 @@ func (r *Repo) TouchEntry(e *entry.Entry) error {
 	})
 }
 
-func (r *Repo) GetEntry(id uint64) (t *entry.Entry, err error) {
+func (r *Repo) GetEntry(id uint64) (e *entry.Entry, err error) {
 	if err = r.open(); err != nil {
 		return
 	}
@@ -103,8 +103,12 @@ func (r *Repo) GetEntry(id uint64) (t *entry.Entry, err error) {
 		if len(bs) == 0 {
 			return errmsg.ErrEntryNotExist
 		}
-		t = &entry.Entry{}
-		return json.Unmarshal(bs, t)
+		var decodeErr error
+		e, decodeErr = decodeEntry(bs)
+		if decodeErr != nil {
+			return decodeErr
+		}
+		return nil
 	})
 	return
 }
