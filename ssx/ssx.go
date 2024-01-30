@@ -141,22 +141,28 @@ func (s *SSX) loadUserSSHConfig() error {
 	return nil
 }
 
-func (s *SSX) Main(ctx context.Context) error {
-	var (
-		e   *entry.Entry
-		err error
-	)
-	if s.opt.Keyword != "" {
-		e, err = s.searchEntry(s.opt.Keyword)
-	} else if s.opt.EntryID > 0 {
-		e, err = s.repo.GetEntry(s.opt.EntryID)
-	} else if s.opt.Addr != "" {
-		e, err = s.parseFuzzyAddr(s.opt.Addr)
-	} else if s.opt.Tag != "" {
-		e, err = s.getEntryByTag(s.opt.Tag)
+func (s *SSX) GetEntry(opt *CmdOption) (*entry.Entry, error) {
+	// The order determines the priority
+	if opt.Keyword != "" {
+		lg.Debug("keyword %q take effect", opt.Keyword)
+		return s.searchEntry(opt.Keyword)
+	} else if opt.EntryID > 0 {
+		lg.Debug("entry id %d take effect", opt.EntryID)
+		return s.repo.GetEntry(opt.EntryID)
+	} else if opt.Addr != "" {
+		lg.Debug("addr %q take effect", opt.Addr)
+		return s.parseFuzzyAddr(opt.Addr)
+	} else if opt.Tag != "" {
+		lg.Debug("tag %q take effect", opt.Tag)
+		return s.getEntryByTag(opt.Tag)
 	} else {
-		e, err = s.selectEntryFromAll()
+		lg.Debug("select entry from all")
+		return s.selectEntryFromAll()
 	}
+}
+
+func (s *SSX) Main(ctx context.Context) error {
+	e, err := s.GetEntry(s.opt)
 	if err != nil {
 		return err
 	}

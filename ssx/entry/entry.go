@@ -3,6 +3,7 @@ package entry
 import (
 	"bufio"
 	"context"
+	"encoding/json"
 	"fmt"
 	"net"
 	"os"
@@ -10,6 +11,7 @@ import (
 	"path/filepath"
 	"time"
 
+	"github.com/jinzhu/copier"
 	"github.com/pkg/errors"
 	"github.com/skeema/knownhosts"
 	"golang.org/x/crypto/ssh"
@@ -46,6 +48,29 @@ type Entry struct {
 
 func (e *Entry) String() string {
 	return fmt.Sprintf("%s@%s:%s", e.User, e.Host, e.Port)
+}
+
+func (e *Entry) JSON() ([]byte, error) {
+	entryCopy, err := e.Copy()
+	if err != nil {
+		return nil, err
+	}
+
+	entryCopy.Mask()
+	return json.MarshalIndent(entryCopy, "", "    ")
+}
+
+func (e *Entry) Copy() (*Entry, error) {
+	entryCopy := &Entry{}
+	if err := copier.Copy(entryCopy, e); err != nil {
+		return nil, err
+	}
+	return entryCopy, nil
+}
+
+func (e *Entry) Mask() {
+	e.Password = utils.MaskString(e.Password)
+	e.Passphrase = utils.MaskString(e.Passphrase)
 }
 
 func getConnectTimeout() time.Duration {
