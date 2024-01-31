@@ -6,6 +6,8 @@
 <p align="center">
     <a href="https://github.com/vimiix/ssx/actions" alt="license">
     <img src="https://github.com/vimiix/ssx/actions/workflows/release.yml/badge.svg" /></a>
+    <a href="https://goreportcard.com/report/github.com/vimiix/ssx" alt="goreport">
+    <img src="https://goreportcard.com/badge/github.com/vimiix/ssx" /></a>
     <a href="https://github.com/vimiix/ssx/blob/main/LICENSE" alt="license">
     <img src="https://img.shields.io/badge/License-MIT-jasper" /></a>
     <a href="https://github.com/vimiix" alt="author">
