@@ -4,6 +4,7 @@ import (
 	"os"
 	"os/user"
 	"path/filepath"
+	"strings"
 )
 
 // FileExists check given filename if exists
@@ -49,4 +50,12 @@ func CurrentUserName() (string, error) {
 		return "", err
 	}
 	return user.Username, nil
+}
+
+// ContainsI a case-insensitive strings contains
+func ContainsI(s, sub string) bool {
+	return strings.Contains(
+		strings.ToLower(s),
+		strings.ToLower(sub),
+	)
 }

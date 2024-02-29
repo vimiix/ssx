@@ -206,8 +206,8 @@ func (s *SSX) searchEntry(keyword string) (*entry.Entry, error) {
 	}
 	var candidates []*entry.Entry
 	for _, e := range es {
-		if strings.Contains(e.String(), keyword) ||
-			strings.Contains(strings.Join(e.Tags, " "), keyword) {
+		if utils.ContainsI(e.String(), keyword) ||
+			utils.ContainsI(strings.Join(e.Tags, " "), keyword) {
 			candidates = append(candidates, e)
 		}
 	}
@@ -299,7 +299,7 @@ func (s *SSX) parseFuzzyAddr(addr string) (*entry.Entry, error) {
 
 func foundTargetByAddr[T comparable](em map[T]*entry.Entry, host, username, port string) (hit *entry.Entry, candidates []*entry.Entry) {
 	for _, e := range em {
-		if !strings.Contains(e.Host, host) {
+		if !utils.ContainsI(e.Host, host) {
 			continue
 		}
 		if username != "" && e.User == username {
@@ -337,7 +337,7 @@ func foundTargetByTag[T comparable](em map[T]*entry.Entry, tagKeyword string) (c
 			continue
 		}
 		for _, tag := range e.Tags {
-			if strings.Contains(tag, tagKeyword) {
+			if utils.ContainsI(tag, tagKeyword) {
 				candidates = append(candidates, e)
 				break
 			}
@@ -361,7 +361,7 @@ func (s *SSX) selectEntry(es []*entry.Entry, promptOption ...string) (*entry.Ent
 	searcher := func(input string, index int) bool {
 		e := es[index]
 		content := fmt.Sprintf("%s %s", e.String(), strings.Join(e.Tags, " "))
-		return strings.Contains(content, input)
+		return utils.ContainsI(content, input)
 	}
 
 	promptStr := "select entry"
