@@ -21,6 +21,9 @@ func newInfoCmd() *cobra.Command {
 			if err != nil {
 				return err
 			}
+			if e.ID <= 0 && opt.Keyword != "" {
+				return fmt.Errorf("not matched any entry for %q", opt.Keyword)
+			}
 			bs, err := e.JSON()
 			if err != nil {
 				return err
