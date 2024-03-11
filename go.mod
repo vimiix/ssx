@@ -15,9 +15,9 @@ require (
 	github.com/stretchr/testify v1.8.4
 	github.com/vimiix/tablewriter v0.0.0-20231207073205-aad9e2006284
 	go.etcd.io/bbolt v1.3.9
-	golang.org/x/crypto v0.18.0
-	golang.org/x/sys v0.16.0
-	golang.org/x/term v0.16.0
+	golang.org/x/crypto v0.21.0
+	golang.org/x/sys v0.18.0
+	golang.org/x/term v0.18.0
 )
 
 require (
