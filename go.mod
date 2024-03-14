@@ -12,7 +12,7 @@ require (
 	github.com/pkg/errors v0.9.1
 	github.com/skeema/knownhosts v1.2.1
 	github.com/spf13/cobra v1.8.0
-	github.com/stretchr/testify v1.8.4
+	github.com/stretchr/testify v1.9.0
 	github.com/vimiix/tablewriter v0.0.0-20231207073205-aad9e2006284
 	go.etcd.io/bbolt v1.3.9
 	golang.org/x/crypto v0.21.0
