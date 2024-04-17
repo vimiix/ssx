@@ -27,7 +27,10 @@ const (
 	SourceSSXStore  = "ssx_store"
 )
 
-const defaultIdentityFile = "~/.ssh/id_rsa"
+const (
+	defaultIdentityFile = "~/.ssh/id_rsa"
+	defaultUser         = "root"
+)
 
 // Entry represent a target server
 type Entry struct {
@@ -147,11 +150,7 @@ func (e *Entry) sshHostKeyCallback() (ssh.HostKeyCallback, error) {
 
 func (e *Entry) Tidy() error {
 	if len(e.User) <= 0 {
-		curUsername, err := utils.CurrentUserName()
-		if err != nil {
-			return err
-		}
-		e.User = curUsername
+		e.User = defaultUser
 	}
 	if len(e.Port) <= 0 {
 		e.Port = "22"
