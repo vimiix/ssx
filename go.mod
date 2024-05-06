@@ -16,8 +16,8 @@ require (
 	github.com/vimiix/tablewriter v0.0.0-20231207073205-aad9e2006284
 	go.etcd.io/bbolt v1.3.9
 	golang.org/x/crypto v0.22.0
-	golang.org/x/sys v0.19.0
-	golang.org/x/term v0.19.0
+	golang.org/x/sys v0.20.0
+	golang.org/x/term v0.20.0
 )
 
 require (
