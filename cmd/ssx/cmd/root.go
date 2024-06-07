@@ -73,9 +73,10 @@ ssx 100 pwd`,
 	}
 	root.Flags().StringVarP(&opt.DBFile, "file", "f", "", "filepath to store auth data")
 	root.Flags().Uint64VarP(&opt.EntryID, "id", "i", 0, "entry id")
-	root.Flags().StringVarP(&opt.Addr, "server", "s", "", "target server address\nsupport formats: [user@]host[:port]")
+	root.Flags().StringVarP(&opt.Addr, "server", "s", "", "target server address\nsupport format: [user@]host[:port]")
 	root.Flags().StringVarP(&opt.Tag, "tag", "t", "", "search entry by tag")
 	root.Flags().StringVarP(&opt.IdentityFile, "keyfile", "k", "", "identity_file path")
+	root.Flags().StringVarP(&opt.JumpServers, "jump-server", "J", "", "jump servers, multiple jump hops may be specified separated by comma characters\nformat: [user1@]host1[:port1][,[user2@]host2[:port2]...]")
 	root.Flags().StringVarP(&opt.Command, "cmd", "c", "", "the command to execute\nssh connection will exit after the execution complete")
 	root.Flags().DurationVar(&opt.Timeout, "timeout", 0, "timeout for connecting and executing command")
 

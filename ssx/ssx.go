@@ -33,6 +33,7 @@ type CmdOption struct {
 	Addr         string
 	Tag          string
 	IdentityFile string
+	JumpServers  string
 	Keyword      string
 	Command      string
 	Timeout      time.Duration
@@ -198,6 +199,27 @@ func (s *SSX) getAllEntries() ([]*entry.Entry, error) {
 	return es, nil
 }
 
+func (s *SSX) buildNewEntry(host, username, port string) (*entry.Entry, error) {
+	e := &entry.Entry{
+		Host:    host,
+		User:    username,
+		Port:    port,
+		KeyPath: utils.ExpandHomeDir(s.opt.IdentityFile),
+		Source:  entry.SourceSSXStore,
+	}
+	if s.opt.JumpServers != "" {
+		proxy, err := parseProxyChainFromString(s.opt.JumpServers)
+		if err != nil {
+			return nil, err
+		}
+		e.Proxy = proxy
+	}
+	if err := e.Tidy(); err != nil {
+		return nil, err
+	}
+	return e, nil
+}
+
 // search by host and tag first, if not found, then connect as a new entry
 func (s *SSX) searchEntry(keyword string) (*entry.Entry, error) {
 	es, err := s.getAllEntries()
@@ -212,6 +234,7 @@ func (s *SSX) searchEntry(keyword string) (*entry.Entry, error) {
 		}
 	}
 	if len(candidates) == 1 {
+		lg.Debug("found exist entry: %s", candidates[0].String())
 		return candidates[0], nil
 	}
 	if len(candidates) > 1 {
@@ -223,14 +246,8 @@ func (s *SSX) searchEntry(keyword string) (*entry.Entry, error) {
 		return nil, errors.Errorf("invalid address: %s", keyword)
 	}
 	username, host, port := matches[1], matches[2], matches[3]
-	e := &entry.Entry{
-		Host:    host,
-		User:    username,
-		Port:    port,
-		KeyPath: utils.ExpandHomeDir(s.opt.IdentityFile),
-		Source:  entry.SourceSSXStore,
-	}
-	if err = e.Tidy(); err != nil {
+	e, err := s.buildNewEntry(host, username, port)
+	if err != nil {
 		return nil, err
 	}
 	for _, exist := range es {
@@ -284,17 +301,60 @@ func (s *SSX) parseFuzzyAddr(addr string) (*entry.Entry, error) {
 
 	// new entry
 	lg.Debug("it is a fresh entry")
-	e := &entry.Entry{
-		Host:    host,
-		User:    username,
-		Port:    port,
-		KeyPath: s.opt.IdentityFile,
-		Source:  entry.SourceSSXStore,
+	return s.buildNewEntry(host, username, port)
+}
+
+func parseProxyChainFromString(s string) (*entry.Proxy, error) {
+	if s == "" {
+		return nil, nil
 	}
-	if err = e.Tidy(); err != nil {
-		return nil, err
+	servers := strings.Split(s, ",")
+	var (
+		root, cursor *entry.Proxy
+		err          error
+	)
+	for idx, server := range servers {
+		if idx == 0 {
+			root, err = parseProxyFromString(server)
+			if err != nil {
+				return nil, err
+			}
+			if root == nil {
+				break
+			}
+			cursor = root
+			continue
+		}
+
+		p, err := parseProxyFromString(server)
+		if err != nil {
+			return nil, err
+		}
+		if p == nil {
+			break
+		}
+		cursor.Proxy = p
+		cursor = p
 	}
-	return e, nil
+	return root, nil
+}
+
+func parseProxyFromString(s string) (*entry.Proxy, error) {
+	if s == "" {
+		return nil, nil
+	}
+	matches := addrRegex.FindStringSubmatch(s)
+	if len(matches) == 0 {
+		return nil, errors.Errorf("invalid address: %s", s)
+	}
+	username, host, port := matches[1], matches[2], matches[3]
+	p := &entry.Proxy{
+		User: username,
+		Host: host,
+		Port: port,
+	}
+	lg.Debug("parse proxy %s success", s)
+	return p, nil
 }
 
 func foundTargetByAddr[T comparable](em map[T]*entry.Entry, host, username, port string) (hit *entry.Entry, candidates []*entry.Entry) {
