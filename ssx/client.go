@@ -2,11 +2,9 @@ package ssx
 
 import (
 	"context"
-	"fmt"
 	"io"
 	"net"
 	"os"
-	"strings"
 	"sync"
 	"time"
 
@@ -16,6 +14,10 @@ import (
 	"github.com/vimiix/ssx/internal/lg"
 	"github.com/vimiix/ssx/internal/terminal"
 	"github.com/vimiix/ssx/ssx/entry"
+)
+
+const (
+	NETWORK = "tcp"
 )
 
 type Client struct {
@@ -166,9 +168,9 @@ func (c *Client) keepalive(ctx context.Context) {
 }
 
 // code source: https://github.com/golang/go/issues/20288#issuecomment-832033017
-func dialContext(ctx context.Context, network, addr string, config *ssh.ClientConfig) (*ssh.Client, error) {
+func dialContext(ctx context.Context, addr string, config *ssh.ClientConfig) (*ssh.Client, error) {
 	d := net.Dialer{Timeout: config.Timeout}
-	conn, err := d.DialContext(ctx, network, addr)
+	conn, err := d.DialContext(ctx, NETWORK, addr)
 	if err != nil {
 		return nil, err
 	}
@@ -179,50 +181,82 @@ func dialContext(ctx context.Context, network, addr string, config *ssh.ClientCo
 	return ssh.NewClient(c, chans, reqs), nil
 }
 
+func dialThroughProxy(ctx context.Context, proxy *entry.Proxy, parentProxyCli *ssh.Client, targetEntry *entry.Entry) (*ssh.Client, error) {
+	var err error
+	if parentProxyCli == nil {
+		proxyConfig, err := proxy.GenSSHConfig(ctx)
+		if err != nil {
+			return nil, err
+		}
+		lg.Debug("dialing proxy: %s", proxy.String())
+		parentProxyCli, err = dialContext(ctx, proxy.Address(), proxyConfig)
+		if err != nil {
+			lg.Debug("dial proxy %s failed: %v", proxy.String(), err)
+			return nil, err
+		}
+		lg.Debug("proxy client establised")
+	}
+
+	var (
+		tmpTargetAddr   string
+		tmpTargetConfig *ssh.ClientConfig
+		tmpHostString   string
+	)
+	if proxy.Proxy != nil {
+		tmpHostString = proxy.Proxy.String()
+		tmpTargetAddr = proxy.Proxy.Address()
+		tmpTargetConfig, err = proxy.Proxy.GenSSHConfig(ctx)
+		if err != nil {
+			return nil, err
+		}
+	} else {
+		tmpHostString = targetEntry.String()
+		tmpTargetAddr = targetEntry.Address()
+		tmpTargetConfig, err = targetEntry.GenSSHConfig(ctx)
+		if err != nil {
+			return nil, err
+		}
+	}
+	lg.Debug("dialing to %s", tmpHostString)
+	conn, err := parentProxyCli.DialContext(ctx, NETWORK, tmpTargetAddr)
+	if err != nil {
+		return nil, err
+	}
+	nc, chans, reqs, err := ssh.NewClientConn(conn, tmpTargetAddr, tmpTargetConfig)
+	if err != nil {
+		return nil, err
+	}
+	targetCli := ssh.NewClient(nc, chans, reqs)
+	if proxy.Proxy == nil {
+		return targetCli, nil
+	}
+	return dialThroughProxy(ctx, proxy.Proxy, parentProxyCli, targetEntry)
+}
+
 // Login connect remote server and touch enrty in storage
 func (c *Client) Login(ctx context.Context) error {
-	if err := c.connect(ctx); err != nil {
+	lg.Debug("connecting to %s", c.entry.String())
+	cli, err := c.dial(ctx)
+	if err != nil {
 		return err
 	}
+	c.cli = cli
 	if err := c.touchEntry(c.entry); err != nil {
 		lg.Error("failed to touch entry: %s", err)
 	}
 	return nil
 }
 
-func (c *Client) connect(ctx context.Context) error {
-	network := "tcp"
-	addr := net.JoinHostPort(c.entry.Host, c.entry.Port)
-	clientConfig, err := c.entry.GenSSHConfig(ctx)
+func (c *Client) dial(ctx context.Context) (*ssh.Client, error) {
+	if c.entry.Proxy != nil {
+		return dialThroughProxy(ctx, c.entry.Proxy, nil, c.entry)
+	}
+	// connect directly
+	sshConfig, err := c.entry.GenSSHConfig(ctx)
 	if err != nil {
-		return err
+		return nil, err
 	}
-	lg.Debug("connecting to %s", c.entry.String())
-	cli, err := dialContext(ctx, network, addr, clientConfig)
-	if err == nil {
-		c.cli = cli
-		return nil
-	}
-
-	if strings.Contains(err.Error(), "no supported methods remain") {
-		lg.Debug("failed connect by default auth methods, try password again")
-		fmt.Printf("%s@%s's password:", c.entry.User, c.entry.Host)
-		bs, readErr := terminal.ReadPassword(ctx)
-		fmt.Println()
-		if readErr == nil {
-			p := string(bs)
-			if p != "" {
-				clientConfig.Auth = []ssh.AuthMethod{ssh.Password(p)}
-			}
-			cli, err = ssh.Dial(network, addr, clientConfig)
-			if err == nil {
-				c.entry.Password = p
-				c.cli = cli
-				return nil
-			}
-		}
-	}
-	return err
+	return dialContext(ctx, c.entry.Address(), sshConfig)
 }
 
 func (c *Client) close() {

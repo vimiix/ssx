@@ -1,7 +1,6 @@
 package entry
 
 import (
-	"bufio"
 	"context"
 	"encoding/json"
 	"fmt"
@@ -30,6 +29,7 @@ const (
 const (
 	defaultIdentityFile = "~/.ssh/id_rsa"
 	defaultUser         = "root"
+	defaultPort         = "22"
 )
 
 // Entry represent a target server
@@ -46,11 +46,15 @@ type Entry struct {
 	Source     string    `json:"source"` // Data source, used to distinguish that it is from ssx stored or local ssh configuration
 	CreateAt   time.Time `json:"create_at"`
 	UpdateAt   time.Time `json:"update_at"`
-	// TODO support jump server
+	Proxy      *Proxy    `json:"proxy"`
 }
 
 func (e *Entry) String() string {
 	return fmt.Sprintf("%s@%s:%s", e.User, e.Host, e.Port)
+}
+
+func (e *Entry) Address() string {
+	return net.JoinHostPort(e.Host, e.Port)
 }
 
 func (e *Entry) JSON() ([]byte, error) {
@@ -74,6 +78,9 @@ func (e *Entry) Copy() (*Entry, error) {
 func (e *Entry) Mask() {
 	e.Password = utils.MaskString(e.Password)
 	e.Passphrase = utils.MaskString(e.Passphrase)
+	if e.Proxy != nil {
+		e.Proxy.Mask()
+	}
 }
 
 func getConnectTimeout() time.Duration {
@@ -91,7 +98,7 @@ func getConnectTimeout() time.Duration {
 }
 
 func (e *Entry) GenSSHConfig(ctx context.Context) (*ssh.ClientConfig, error) {
-	cb, err := e.sshHostKeyCallback()
+	cb, err := sshHostKeyCallback()
 	if err != nil {
 		return nil, err
 	}
@@ -109,7 +116,7 @@ func (e *Entry) GenSSHConfig(ctx context.Context) (*ssh.ClientConfig, error) {
 	return cfg, nil
 }
 
-func (e *Entry) sshHostKeyCallback() (ssh.HostKeyCallback, error) {
+func sshHostKeyCallback() (ssh.HostKeyCallback, error) {
 	khPath := utils.ExpandHomeDir("~/.ssh/known_hosts")
 	if !utils.FileExists(khPath) {
 		f, err := os.OpenFile(khPath, os.O_RDWR|os.O_CREATE, 0600)
@@ -153,10 +160,13 @@ func (e *Entry) Tidy() error {
 		e.User = defaultUser
 	}
 	if len(e.Port) <= 0 {
-		e.Port = "22"
+		e.Port = defaultPort
 	}
 	if e.KeyPath == "" {
 		e.KeyPath = utils.ExpandHomeDir(defaultIdentityFile)
+	}
+	if e.Proxy != nil {
+		e.Proxy.tidy()
 	}
 	return nil
 }
@@ -177,36 +187,55 @@ func (e *Entry) AuthMethods(ctx context.Context) ([]ssh.AuthMethod, error) {
 	if len(keyfileAuths) > 0 {
 		authMethods = append(authMethods, keyfileAuths...)
 	}
-
-	authMethods = append(authMethods, e.interactAuth(ctx))
+	authMethods = append(authMethods, passwordCallback(ctx, e.User, e.Host, func(password string) { e.Password = password }))
 	return authMethods, nil
 }
 
-func (e *Entry) interactAuth(ctx context.Context) ssh.AuthMethod {
-	return ssh.KeyboardInteractive(func(name, instruction string, questions []string, echos []bool) (answers []string, err error) {
-		answers = make([]string, 0, len(questions))
-		for i, q := range questions {
-			fmt.Print(q)
-			if echos[i] {
-				scan := bufio.NewScanner(os.Stdin)
-				if scan.Scan() {
-					answers = append(answers, scan.Text())
-				}
-				if err := scan.Err(); err != nil {
-					return nil, err
-				}
-			} else {
-				b, err := terminal.ReadPassword(ctx)
-				if err != nil {
-					return nil, err
-				}
-				fmt.Println()
-				answers = append(answers, string(b))
+func passwordCallback(ctx context.Context, user, host string, storePassFunc func(password string)) ssh.AuthMethod {
+	prompt := func() (string, error) {
+		lg.Debug("login through password callback")
+		fmt.Printf("%s@%s's password:", user, host)
+		bs, readErr := terminal.ReadPassword(ctx)
+		fmt.Println()
+		if readErr == nil {
+			p := string(bs)
+			if storePassFunc != nil {
+				storePassFunc(p)
 			}
+			return p, nil
 		}
-		return answers, nil
-	})
+		return "", readErr
+	}
+	return ssh.PasswordCallback(prompt)
 }
+
+// At present, I do not know how to correctly capture password information,
+// so I need to write promt by myself through passwordCallback to achieve it
+// func interactAuth(ctx context.Context, who string) ssh.AuthMethod {
+// 	return ssh.KeyboardInteractive(func(name, instruction string, questions []string, echos []bool) (answers []string, err error) {
+// 		answers = make([]string, 0, len(questions))
+// 		for i, q := range questions {
+// 			fmt.Printf("[%s] %s", who, q)
+// 			if echos[i] {
+// 				scan := bufio.NewScanner(os.Stdin)
+// 				if scan.Scan() {
+// 					answers = append(answers, scan.Text())
+// 				}
+// 				if err := scan.Err(); err != nil {
+// 					return nil, err
+// 				}
+// 			} else {
+// 				b, err := terminal.ReadPassword(ctx)
+// 				if err != nil {
+// 					return nil, err
+// 				}
+// 				fmt.Println()
+// 				answers = append(answers, string(b))
+// 			}
+// 		}
+// 		return answers, nil
+// 	})
+// }
 
 func (e *Entry) privateKeyAuthMethods(ctx context.Context) ([]ssh.AuthMethod, error) {
 	keyfiles := e.collectKeyfiles()

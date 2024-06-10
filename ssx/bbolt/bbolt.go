@@ -58,7 +58,6 @@ func (r *Repo) TouchEntry(e *entry.Entry) error {
 	}
 	defer r.close()
 
-	lg.Debug("bbolt repo: touch entry: %d", e.ID)
 	return r.db.Update(func(tx *bbolt.Tx) error {
 		b := tx.Bucket(r.entryBucket)
 		var bs []byte
@@ -68,6 +67,7 @@ func (r *Repo) TouchEntry(e *entry.Entry) error {
 		if len(bs) == 0 {
 			// insert
 			e.ID, _ = b.NextSequence()
+			lg.Debug("bbolt repo: touch new entry: %d", e.ID)
 			now := time.Now()
 			e.VisitCount = 1
 			e.CreateAt = now
@@ -78,6 +78,7 @@ func (r *Repo) TouchEntry(e *entry.Entry) error {
 				return err
 			}
 			e.ID = rawEntry.ID
+			lg.Debug("bbolt repo: update entry: %d", e.ID)
 			e.VisitCount = rawEntry.VisitCount + 1
 			e.CreateAt = rawEntry.CreateAt
 			e.UpdateAt = time.Now()
