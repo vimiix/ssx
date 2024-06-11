@@ -238,13 +238,27 @@ func (c *Client) Login(ctx context.Context) error {
 	lg.Debug("connecting to %s", c.entry.String())
 	cli, err := c.dial(ctx)
 	if err != nil {
-		return err
+		// try fix authentication
+		if c.entry.ID != 0 {
+			lg.Error("login failed with stored authentication, try login with interactive")
+			cli, err = c.tryLoginAgainWithEmptyPassword(ctx)
+			if err != nil {
+				return err
+			}
+		} else {
+			return err
+		}
 	}
 	c.cli = cli
 	if err := c.touchEntry(c.entry); err != nil {
 		lg.Error("failed to touch entry: %s", err)
 	}
 	return nil
+}
+
+func (c *Client) tryLoginAgainWithEmptyPassword(ctx context.Context) (*ssh.Client, error) {
+	c.entry.ClearPassword()
+	return c.dial(ctx)
 }
 
 func (c *Client) dial(ctx context.Context) (*ssh.Client, error) {

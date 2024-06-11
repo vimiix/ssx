@@ -77,8 +77,10 @@ ssx 100 pwd`,
 	root.Flags().StringVarP(&opt.Tag, "tag", "t", "", "search entry by tag")
 	root.Flags().StringVarP(&opt.IdentityFile, "keyfile", "k", "", "identity_file path")
 	root.Flags().StringVarP(&opt.JumpServers, "jump-server", "J", "", "jump servers, multiple jump hops may be specified separated by comma characters\nformat: [user1@]host1[:port1][,[user2@]host2[:port2]...]")
-	root.Flags().StringVarP(&opt.Command, "cmd", "c", "", "the command to execute\nssh connection will exit after the execution complete")
+	root.Flags().StringVarP(&opt.Command, "cmd", "c", "", "excute the command and exit")
 	root.Flags().DurationVar(&opt.Timeout, "timeout", 0, "timeout for connecting and executing command")
+	root.Flags().IntVarP(&opt.Port, "port", "p", 22, "port to connect to on the remote host")
+	root.Flags().BoolVar(&opt.Unsafe, "unsafe", false, "store host secret information with unsafe format")
 
 	root.PersistentFlags().BoolVarP(&printVersion, "version", "v", false, "print ssx version")
 	root.PersistentFlags().BoolVar(&logVerbose, "verbose", false, "output detail logs")

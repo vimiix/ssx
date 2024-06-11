@@ -7,7 +7,6 @@ import (
 	"os/user"
 	"path"
 	"path/filepath"
-	"regexp"
 	"sort"
 	"strconv"
 	"strings"
@@ -37,6 +36,8 @@ type CmdOption struct {
 	Keyword      string
 	Command      string
 	Timeout      time.Duration
+	Port         int
+	Unsafe       bool
 }
 
 // Tidy complete unset fields with default values
@@ -200,12 +201,21 @@ func (s *SSX) getAllEntries() ([]*entry.Entry, error) {
 }
 
 func (s *SSX) buildNewEntry(host, username, port string) (*entry.Entry, error) {
+	if port == "" && s.opt.Port > 0 {
+		// Takes effect for new entry only
+		port = strconv.Itoa(s.opt.Port)
+	}
+	safeMode := entry.ModeSafe
+	if s.opt.Unsafe || env.IsUnsafeMode() {
+		safeMode = entry.ModeUnsafe
+	}
 	e := &entry.Entry{
-		Host:    host,
-		User:    username,
-		Port:    port,
-		KeyPath: utils.ExpandHomeDir(s.opt.IdentityFile),
-		Source:  entry.SourceSSXStore,
+		Host:     host,
+		User:     username,
+		Port:     port,
+		KeyPath:  utils.ExpandHomeDir(s.opt.IdentityFile),
+		Source:   entry.SourceSSXStore,
+		SafeMode: safeMode,
 	}
 	if s.opt.JumpServers != "" {
 		proxy, err := parseProxyChainFromString(s.opt.JumpServers)
@@ -241,12 +251,11 @@ func (s *SSX) searchEntry(keyword string) (*entry.Entry, error) {
 		return s.selectEntry(candidates)
 	}
 	lg.Debug("not found by keyword %q, treat it as new entry", keyword)
-	matches := addrRegex.FindStringSubmatch(keyword)
-	if len(matches) == 0 {
-		return nil, errors.Errorf("invalid address: %s", keyword)
+	match, err := utils.MatchAddress(keyword)
+	if err != nil {
+		return nil, err
 	}
-	username, host, port := matches[1], matches[2], matches[3]
-	e, err := s.buildNewEntry(host, username, port)
+	e, err := s.buildNewEntry(match.Host, match.User, match.Port)
 	if err != nil {
 		return nil, err
 	}
@@ -267,15 +276,13 @@ func (s *SSX) selectEntryFromAll() (*entry.Entry, error) {
 	return s.selectEntry(es)
 }
 
-var addrRegex = regexp.MustCompile(`^(?:(?P<user>\w+)@)?(?P<host>[\w.-]+)(?::(?P<port>\d+))?(?:/(?P<path>[\w/.-]+))?$`)
-
 func (s *SSX) parseFuzzyAddr(addr string) (*entry.Entry, error) {
 	// [user@]host[:port][/path]
-	matches := addrRegex.FindStringSubmatch(addr)
-	if len(matches) == 0 {
-		return nil, errors.Errorf("invalid address: %s", addr)
+	match, err := utils.MatchAddress(addr)
+	if err != nil {
+		return nil, err
 	}
-	username, host, port := matches[1], matches[2], matches[3]
+	username, host, port := match.User, match.Host, match.Port
 
 	em, err := s.repo.GetAllEntries()
 	if err != nil {
@@ -343,15 +350,14 @@ func parseProxyFromString(s string) (*entry.Proxy, error) {
 	if s == "" {
 		return nil, nil
 	}
-	matches := addrRegex.FindStringSubmatch(s)
-	if len(matches) == 0 {
-		return nil, errors.Errorf("invalid address: %s", s)
+	match, err := utils.MatchAddress(s)
+	if err != nil {
+		return nil, err
 	}
-	username, host, port := matches[1], matches[2], matches[3]
 	p := &entry.Proxy{
-		User: username,
-		Host: host,
-		Port: port,
+		User: match.User,
+		Host: match.Host,
+		Port: match.Port,
 	}
 	lg.Debug("parse proxy %s success", s)
 	return p, nil

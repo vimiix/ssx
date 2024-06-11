@@ -70,3 +70,10 @@ func (p *Proxy) GenSSHConfig(ctx context.Context) (*ssh.ClientConfig, error) {
 	}
 	return cfg, nil
 }
+
+func (p *Proxy) ClearPassword() {
+	p.Password = ""
+	if p.Proxy != nil {
+		p.Proxy.ClearPassword()
+	}
+}
