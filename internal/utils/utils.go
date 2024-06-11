@@ -4,7 +4,12 @@ import (
 	"os"
 	"os/user"
 	"path/filepath"
+	"regexp"
 	"strings"
+
+	"github.com/denisbrodbeck/machineid"
+	"github.com/pkg/errors"
+	"github.com/vimiix/ssx/ssx/env"
 )
 
 // FileExists check given filename if exists
@@ -58,4 +63,47 @@ func ContainsI(s, sub string) bool {
 		strings.ToLower(s),
 		strings.ToLower(sub),
 	)
+}
+
+type Address struct {
+	User string
+	Host string
+	Port string
+}
+
+var addrRegex = regexp.MustCompile(`^(?:(?P<user>[\w.-_]+)@)?(?P<host>[\w.-]+)(?::(?P<port>\d+))?(?:/(?P<path>[\w/.-]+))?$`)
+
+func MatchAddress(addr string) (*Address, error) {
+	matches := addrRegex.FindStringSubmatch(addr)
+	if len(matches) == 0 {
+		return nil, errors.Errorf("invalid address: %q", addr)
+	}
+	username, host, port := matches[1], matches[2], matches[3]
+	addrObj := &Address{
+		User: username,
+		Host: host,
+		Port: port,
+	}
+	return addrObj, nil
+}
+
+func to16chars(s string) string {
+	if len(s) >= 16 {
+		return s[:16]
+	}
+	return s + strings.Repeat("=", 16-len(s))
+}
+
+// GetSecretKey get secret key from env, if not set returns machine id
+// always returns 16 characters key
+func GetSecretKey() (string, error) {
+	if os.Getenv(env.SSXSecretKey) != "" {
+		return to16chars(os.Getenv(env.SSXSecretKey)), nil
+	}
+	// ref: https://man7.org/linux/man-pages/man5/machine-id.5.html
+	machineID, err := machineid.ProtectedID("ssx")
+	if err != nil {
+		return "", err
+	}
+	return to16chars(machineID), nil
 }

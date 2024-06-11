@@ -24,7 +24,7 @@ import (
 // Encrypt Generates the ciphertext for the given string.
 // If the encryption fails, the original characters will be returned.
 // If the passed string is empty, return empty directly.
-func Encrypt(text string) string {
+func Encrypt(text string, unsafe bool) string {
 	if text == "" {
 		return ""
 	}
@@ -32,6 +32,13 @@ func Encrypt(text string) string {
 	curTime := time.Now().Format("01021504")
 	salt := md5encode(curTime)
 	key := salt[:8] + curTime
+	if !unsafe {
+		secretKey, err := utils.GetSecretKey()
+		if err != nil {
+			lg.Warn("failed to get secret key: %v", err)
+		}
+		key += secretKey
+	}
 
 	cipherText, err := aesEncrypt(text, key)
 	if err != nil {
@@ -41,7 +48,7 @@ func Encrypt(text string) string {
 	return base64.StdEncoding.EncodeToString([]byte(salt[:8] + shiftEncode(curTime) + cipherText))
 }
 
-func Decrypt(rawCipher string) string {
+func Decrypt(rawCipher string, unsafe bool) string {
 	if rawCipher == "" {
 		return ""
 	}
@@ -54,6 +61,13 @@ func Decrypt(rawCipher string) string {
 
 	key := string(dec[:8]) + shiftDecode(string(dec[8:16]))
 	text := string(dec[16:])
+	if !unsafe {
+		secretKey, err := utils.GetSecretKey()
+		if err != nil {
+			lg.Warn("failed to get secret key: %v", err)
+		}
+		key += secretKey
+	}
 	res, err := aesDecrypt(text, key)
 	if err != nil {
 		lg.Debug("failed to decypt cipher '%s': %s", text, err)

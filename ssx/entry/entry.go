@@ -32,6 +32,12 @@ const (
 	defaultPort         = "22"
 )
 
+const (
+	ModeUninit = ""
+	ModeSafe   = "safe"
+	ModeUnsafe = "unsafe"
+)
+
 // Entry represent a target server
 type Entry struct {
 	ID         uint64    `json:"id"`
@@ -42,11 +48,16 @@ type Entry struct {
 	KeyPath    string    `json:"key_path"`
 	Passphrase string    `json:"passphrase"`
 	Password   string    `json:"password"`
+	SafeMode   string    `json:"safe_mode"`
 	Tags       []string  `json:"tags"`
 	Source     string    `json:"source"` // Data source, used to distinguish that it is from ssx stored or local ssh configuration
 	CreateAt   time.Time `json:"create_at"`
 	UpdateAt   time.Time `json:"update_at"`
 	Proxy      *Proxy    `json:"proxy"`
+}
+
+func (e *Entry) IsUnsafe() bool {
+	return e.SafeMode == ModeUninit || e.SafeMode == ModeUnsafe
 }
 
 func (e *Entry) String() string {
@@ -80,6 +91,13 @@ func (e *Entry) Mask() {
 	e.Passphrase = utils.MaskString(e.Passphrase)
 	if e.Proxy != nil {
 		e.Proxy.Mask()
+	}
+}
+
+func (e *Entry) ClearPassword() {
+	e.Password = ""
+	if e.Proxy != nil {
+		e.Proxy.ClearPassword()
 	}
 }
 
