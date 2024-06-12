@@ -23,12 +23,16 @@ func NewRoot() *cobra.Command {
 	root := &cobra.Command{
 		Use:   "ssx",
 		Short: "🦅 ssx is a retentive ssh client",
-		Example: `# If more than one flag of -i, -s ,-t specified, priority is ENTRY_ID > ADDRESS > TAG_NAME
-ssx [-i ENTRY_ID] [-s [USER@]HOST[:PORT]] [-k IDENTITY_FILE] [-t TAG_NAME]
+		Example: `# First login
+ssx [USER@]HOST[:PORT]
 
-# You can also skip the parameters and log in directly with host or tag
+# Login with proxy server
+ssx [-J PROXY_USER@PROXY_HOST:PROXY_PORT] [USER@]HOST[:PORT]]
+
+# After login once, you can login directly with host or tag or specify ID with -i
 ssx [USER@]HOST[:PORT]
 ssx TAG_NAME
+ssx -i ID
 
 # Fuzzy search is also supported
 # For example, you want to login to 192.168.1.100 and
@@ -90,6 +94,10 @@ ssx 100 pwd`,
 	root.AddCommand(newTagCmd())
 	root.AddCommand(newInfoCmd())
 	root.AddCommand(newUpgradeCmd())
+
+	// no longer needed, hidden them for backwards compatibility
+	_ = root.Flags().MarkDeprecated("server", "it will remove in the future")
+	_ = root.Flags().MarkDeprecated("tag", "it will remove in the future")
 
 	root.CompletionOptions.HiddenDefaultCmd = true
 	root.SetHelpCommand(&cobra.Command{Hidden: true})

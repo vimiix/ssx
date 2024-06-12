@@ -43,7 +43,7 @@ then you can get ssx binary in **dist** directory.
 ### Add a new entry
 
 ```bash
-ssx [-s] [USER@]HOST[:PORT] [-k IDENTITY_FILE]
+ssx [USER@]HOST[:PORT] [-k IDENTITY_FILE]
 ```
 
 If given address matched an exist entry, ssx will login directly.
@@ -87,10 +87,6 @@ Once we tag the entry, we can log in through the tag later.
 
 ### Login
 
-If more than one flag of `-i`, `-s` ,`-t` specified,
-
-priority is `ENTRY_ID > ADDRESS > TAG_NAME`
-
 If not specified any flag, ssx will treat the second argument as a keyword for searching from host and tags, if not matched any entry, ssx will treat it as a new entry, and try to login.
 
 ```bash
@@ -101,10 +97,10 @@ ssx
 ssx -i <ID>
 
 # login by address, support partial words
-ssx [-s] <ADDRESS>
+ssx <ADDRESS>
 
 # login by tag
-ssx [-t] <TAG>
+ssx <TAG>
 ```
 
 ### Execute command

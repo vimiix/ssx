@@ -55,7 +55,7 @@ make ssx
 ### 添加新条目(登录一次即代表新增)
 
 ```bash
-ssx [-s] [USER@]HOST[:PORT] [-k IDENTITY_FILE]
+ssx [USER@]HOST[:PORT] [-k IDENTITY_FILE]
 ```
 
 > 如果给定的地址与一个存在的条目匹配，ssx 将直接登录。
@@ -113,13 +113,10 @@ ssx tag -i <ENTRY_ID> [-t TAG1 [-t TAG2 ...]] [-d TAG3 [-d TAG4 ...]]
 当我们完成对服务器的打标签后，比如假设增加了一个 `centos` 的标签，那么我此时就可以通过标签来进行登录了：
 
 ```bash
-// -t 可省略
-ssx [-t] centos
+ssx centos
 ```
 
 ### 登录服务器
-
-如果同时指定了 `-i`， `-s`， `-t` 参数，优先级为 `ENTRY_ID > ADDRESS > TAG_NAME`
 
 如果没有指定任何参数标志，ssx 将把第二个参数作为搜索关键词，从主机和标签中搜索，如果没有匹配任何条目，ssx将把它作为一个新条目，并尝试登录。
 
@@ -131,10 +128,10 @@ ssx
 ssx -i <ID>
 
 # 通过地址登录，支持部分单词
-ssx [-s] <ADDRESS>
+ssx <ADDRESS>
 
 # 通过标签登录
-ssx [-t] <TAG>
+ssx <TAG>
 ```
 
 ### 执行命令
@@ -148,7 +145,7 @@ ssx <TAG> [-c] <COMMAND> [--timeout 30s]
 # 例如:登录192.168.1.100，执行命令'pwd':
 ssx 1.100 pwd
 # 通过 centos 标签执行
-ssx centos -c pwd
+ssx centos [-c] pwd
 ```
 
 ### 删除服务器条目
