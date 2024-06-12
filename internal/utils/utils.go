@@ -17,6 +17,7 @@ import (
 	"github.com/denisbrodbeck/machineid"
 	"github.com/pkg/errors"
 	"github.com/vimiix/ssx/internal/file"
+	"github.com/vimiix/ssx/internal/lg"
 	"github.com/vimiix/ssx/ssx/env"
 )
 
@@ -196,6 +197,11 @@ func Untar(tarPath string, targetDir string, filenames ...string) error {
 			return err
 		// if the header is nil, just skip it (not sure how this happens)
 		case header == nil:
+			continue
+		}
+		if strings.Contains(header.Name, "..") {
+			// code scanning: https://github.com/vimiix/ssx/security/code-scanning/3
+			lg.Warn("ignore file %s due to zip slip vulnerability", header.Name)
 			continue
 		}
 
