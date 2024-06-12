@@ -169,6 +169,11 @@ func (s *SSX) Main(ctx context.Context) error {
 		return err
 	}
 
+	// maybe user want to update keyfile
+	if s.opt.IdentityFile != "" {
+		e.KeyPath = s.opt.IdentityFile
+	}
+
 	client := NewClient(e, s.repo)
 	if len(s.opt.Command) > 0 {
 		opt := &ExecuteOption{
