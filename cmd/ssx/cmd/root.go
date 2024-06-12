@@ -51,7 +51,7 @@ ssx 100 pwd`,
 		Args:               cobra.ArbitraryArgs, // accept arbitrary args for supporting quick login
 		PersistentPreRunE: func(cmd *cobra.Command, args []string) error {
 			lg.SetVerbose(logVerbose)
-			if !printVersion {
+			if !printVersion && cmd.Use != "upgrade" {
 				s, err := ssx.NewSSX(opt)
 				if err != nil {
 					return err
