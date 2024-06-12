@@ -82,7 +82,6 @@ func (c *Client) Interact(ctx context.Context) error {
 
 	lg.Info("connected server %s, version: %s",
 		c.entry.String(), string(c.cli.ServerVersion()))
-
 	session, err := c.cli.NewSession()
 	if err != nil {
 		return err

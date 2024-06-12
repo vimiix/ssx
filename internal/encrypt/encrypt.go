@@ -1,5 +1,3 @@
-// Copyright 2022 Enmotech Inc. All rights reserved.
-
 package encrypt
 
 import (

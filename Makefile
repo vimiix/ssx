@@ -40,7 +40,7 @@ test: ## run all unit tests
 	$(GO) test -gcflags=all=-l $(TEST_FILES) -coverprofile dist/cov.out -covermode count
 
 .PHONY: ssx
-ssx: lint ## build ssx binary
+ssx: ## build ssx binary
 	$(GO) build -ldflags '$(LDFLAGS)' -gcflags '-N -l' -o dist/ssx ./cmd/ssx/main.go
 
 .PHONY: tag

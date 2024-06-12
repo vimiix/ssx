@@ -89,6 +89,7 @@ ssx 100 pwd`,
 	root.AddCommand(newDeleteCmd())
 	root.AddCommand(newTagCmd())
 	root.AddCommand(newInfoCmd())
+	root.AddCommand(newUpgradeCmd())
 
 	root.CompletionOptions.HiddenDefaultCmd = true
 	root.SetHelpCommand(&cobra.Command{Hidden: true})
