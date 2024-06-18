@@ -3,6 +3,7 @@ package cmd
 import (
 	"context"
 	"fmt"
+	"github.com/vimiix/ssx/ssx/version"
 	"io"
 	"net/http"
 	"os"
@@ -26,6 +27,11 @@ const (
 type upgradeOpt struct {
 	PkgPath string
 	Version string
+}
+
+type LatestPkgInfo struct {
+	Version     string
+	DownloadURL string
 }
 
 func newUpgradeCmd() *cobra.Command {
@@ -100,17 +106,23 @@ func upgrade(ctx context.Context, opt *upgradeOpt) error {
 			return err
 		}
 	} else {
-		lg.Info("detecting latest package url")
-		urlStr, err := getLatestPkgURL()
+		lg.Info("detecting latest package info")
+		pkgInfo, err := getLatestPkgInfo()
 		if err != nil {
 			return err
 		}
-		if urlStr == "" {
+		// check version
+		lg.Info("LatestVersion: %s, NowVersion: %s", pkgInfo.Version, version.Version)
+		if pkgInfo.Version == version.Version {
+			lg.Info("You are currently using the latest version.")
+			return nil
+		}
+		if pkgInfo.DownloadURL == "" {
 			return errors.New("failed to get latest package url")
 		}
 		localPkg = filepath.Join(tempDir, "ssx.tar.gz")
-		lg.Info("downloading latest package from %s", urlStr)
-		if err := utils.DownloadFile(ctx, urlStr, localPkg); err != nil {
+		lg.Info("downloading latest package from %s", pkgInfo.DownloadURL)
+		if err := utils.DownloadFile(ctx, pkgInfo.DownloadURL, localPkg); err != nil {
 			return err
 		}
 	}
@@ -138,24 +150,31 @@ func upgrade(ctx context.Context, opt *upgradeOpt) error {
 	return nil
 }
 
-func getLatestPkgURL() (string, error) {
+func getLatestPkgInfo() (*LatestPkgInfo, error) {
 	arch, err := unifyArch()
 	if err != nil {
-		return "", err
+		return nil, err
 	}
 	r, err := http.Get(GITHUB_LATEST_API)
 	if err != nil {
-		return "", err
+		return nil, err
 	}
 	defer r.Body.Close()
 	jsonBody, err := io.ReadAll(r.Body)
 	if err != nil {
-		return "", err
+		return nil, err
 	}
 
-	res := gjson.Get(string(jsonBody),
+	stringBody := string(jsonBody)
+	// get latest version by tag name
+	latestVersion := gjson.Get(stringBody, "tag_name")
+	// get download url
+	downloadUrl := gjson.Get(stringBody,
 		fmt.Sprintf(`assets.#(name%%"*%s_%s.tar.gz").browser_download_url`, runtime.GOOS, arch))
-	return res.String(), nil
+	return &LatestPkgInfo{
+		Version:     latestVersion.String(),
+		DownloadURL: downloadUrl.String(),
+	}, nil
 }
 
 func replaceBinary(newBin string, oldBin string) error {
