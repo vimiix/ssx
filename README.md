@@ -43,7 +43,7 @@ then you can get ssx binary in **dist** directory.
 ### Add a new entry
 
 ```bash
-ssx [USER@]HOST[:PORT] [-k IDENTITY_FILE]
+ssx [USER@]HOST[:PORT] [-k IDENTITY_FILE] [-p PORT]
 ```
 
 If given address matched an exist entry, ssx will login directly.
@@ -124,6 +124,16 @@ ssx delete -i <ENTRY_ID>
 - `SSX_DB_PATH`: DB file to store entries, default is `~/.ssx.db`.
 - `SSX_CONNECT_TIMEOUT`: SSH connect timeout, default is `10s`.
 - `SSX_IMPORT_SSH_CONFIG`: Whether to import the user ssh config, default is empty.
+- `SSX_UNSAFE_MODE`: The password is stored in unsafe mode
+- `SSX_SECRET_KEY`: The secret key for encrypting entry's password, default will use machineid
+
+## Upgrade SSX
+
+> Since: v0.3.0
+
+```bash
+ssx upgrade
+```
 
 ## Copyright
 

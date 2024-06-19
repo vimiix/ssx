@@ -55,7 +55,7 @@ make ssx
 ### 添加新条目(登录一次即代表新增)
 
 ```bash
-ssx [USER@]HOST[:PORT] [-k IDENTITY_FILE]
+ssx [USER@]HOST[:PORT] [-k IDENTITY_FILE] [-p PORT]
 ```
 
 > 如果给定的地址与一个存在的条目匹配，ssx 将直接登录。
@@ -159,8 +159,18 @@ ssx delete -i <ENTRY_ID>
 - `SSX_DB_PATH`: 用于存储条目的数据库文件，默认为 **~/.ssx.db**；
 - `SSX_CONNECT_TIMEOUT`: SSH连接超时，默认为: `10s`；
 - `SSX_IMPORT_SSH_CONFIG`: 是否导入用户ssh配置，默认为空。
+- `SSX_UNSAFE_MODE`: 密码以不安全模式存储
+- `SSX_SECRET_KEY`: 用于加密条目密码的密钥，默认使用所在服务器的设备ID
 
 这里解释一下 `SSX_IMPORT_SSH_CONFIG` 的作用，这个环境变量不设置时，ssx 默认是不会读取用户的 `~/.ssh/config` 文件的，ssx 只使用自己存储文件进行检索。如果将这个环境变量设置为非空（任意字符串），ssx 就会在初始化的时候加载用户 ssh 配置文件中存在的服务器条目，但 ssx 仅读取用于检索和登录，并不会将这些条目持久化到 ssx 的存储文件中，所以，如果 `ssx IP` 登录时，这个 `IP` 是 `~/.ssh/config` 文件中已经配置过登录验证方式的服务器，ssx 匹配到就直接登录了。但 ssx list 查看时，该服务器会被显示到 `found in ssh config` 的表格中，这个表格中的条目是不具有 ID 属性的。
+
+## Upgrade SSX
+
+> 新增于: v0.3.0
+
+```bash
+ssx upgrade
+```
 
 ## 版权
 
