@@ -29,3 +29,11 @@ archives:
       - README.md
 snapshot:
   name_template: "{{ incpatch .Version }}-preview"
+changelog:
+  use: github
+  format: "{{.SHA}}: {{.Message}} (@{{.AuthorUsername}})"
+  filters:
+    exclude:
+      - "^docs:"
+      - "^chore:"
+      - (?i)Merge pull request
