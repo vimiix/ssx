@@ -15,6 +15,7 @@ import (
 	"github.com/skeema/knownhosts"
 	"golang.org/x/crypto/ssh"
 
+	"github.com/vimiix/ssx/internal/file"
 	"github.com/vimiix/ssx/internal/lg"
 	"github.com/vimiix/ssx/internal/terminal"
 	"github.com/vimiix/ssx/internal/utils"
@@ -26,8 +27,8 @@ const (
 	SourceSSXStore  = "ssx_store"
 )
 
-const (
-	defaultIdentityFile = "~/.ssh/id_rsa"
+var (
+	defaultIdentityFile = utils.ExpandHomeDir("~/.ssh/id_rsa")
 	defaultUser         = "root"
 	defaultPort         = "22"
 )
@@ -180,8 +181,8 @@ func (e *Entry) Tidy() error {
 	if len(e.Port) <= 0 {
 		e.Port = defaultPort
 	}
-	if e.KeyPath == "" {
-		e.KeyPath = utils.ExpandHomeDir(defaultIdentityFile)
+	if e.KeyPath == "" && file.IsExist(defaultIdentityFile) {
+		e.KeyPath = defaultIdentityFile
 	}
 	if e.Proxy != nil {
 		e.Proxy.tidy()
@@ -262,9 +263,14 @@ func (e *Entry) privateKeyAuthMethods(ctx context.Context) ([]ssh.AuthMethod, er
 	}
 	var methods []ssh.AuthMethod
 	for _, f := range keyfiles {
+		if !file.IsExist(f) {
+			lg.Debug("keyfile %s not found, skip", f)
+			continue
+		}
 		auth, err := e.keyfileAuth(ctx, f)
 		if err != nil {
-			return nil, err
+			lg.Debug("skip use keyfile: %s", f)
+			continue
 		}
 		if auth != nil {
 			methods = append(methods, auth)
