@@ -146,7 +146,7 @@ func sshHostKeyCallback() (ssh.HostKeyCallback, error) {
 	}
 	kh, err := knownhosts.New(khPath)
 	if err != nil {
-		lg.Error("failed to read known_hosts: ", err)
+		lg.Error("failed to read known_hosts: %s", err)
 		return nil, err
 	}
 	// Create a custom permissive hostkey callback which still errors on hosts
