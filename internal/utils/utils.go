@@ -16,14 +16,16 @@ import (
 
 	"github.com/denisbrodbeck/machineid"
 	"github.com/pkg/errors"
-	"github.com/vimiix/ssx/internal/file"
 	"github.com/vimiix/ssx/internal/lg"
 	"github.com/vimiix/ssx/ssx/env"
 )
 
 // FileExists check given filename if exists
 func FileExists(filename string) bool {
-	_, err := os.Stat(filename)
+	if filename == "" {
+		return false
+	}
+	_, err := os.Stat(ExpandHomeDir(filename))
 	return !os.IsNotExist(err)
 }
 
@@ -235,7 +237,7 @@ func Untar(tarPath string, targetDir string, filenames ...string) error {
 			}
 
 			dirpath := path.Dir(target)
-			if !file.IsExist(dirpath) {
+			if !FileExists(dirpath) {
 				if err := os.MkdirAll(dirpath, 0700); err != nil {
 					return err
 				}
@@ -254,4 +256,20 @@ func Untar(tarPath string, targetDir string, filenames ...string) error {
 			targetFile.Close()
 		}
 	}
+}
+
+// CopyFile copies the contents of src to dst
+func CopyFile(src, dst string, perm os.FileMode) error {
+	sf, err := os.Open(src)
+	if err != nil {
+		return err
+	}
+	defer sf.Close()
+	tf, err := os.OpenFile(dst, os.O_RDWR|os.O_CREATE|os.O_TRUNC, perm)
+	if err != nil {
+		return err
+	}
+	defer tf.Close()
+	_, err = io.Copy(tf, sf)
+	return err
 }

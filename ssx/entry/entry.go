@@ -15,7 +15,6 @@ import (
 	"github.com/skeema/knownhosts"
 	"golang.org/x/crypto/ssh"
 
-	"github.com/vimiix/ssx/internal/file"
 	"github.com/vimiix/ssx/internal/lg"
 	"github.com/vimiix/ssx/internal/terminal"
 	"github.com/vimiix/ssx/internal/utils"
@@ -28,7 +27,7 @@ const (
 )
 
 var (
-	defaultIdentityFile = utils.ExpandHomeDir("~/.ssh/id_rsa")
+	defaultIdentityFile = "~/.ssh/id_rsa"
 	defaultUser         = "root"
 	defaultPort         = "22"
 )
@@ -100,6 +99,10 @@ func (e *Entry) ClearPassword() {
 	if e.Proxy != nil {
 		e.Proxy.ClearPassword()
 	}
+}
+
+func (e *Entry) KeyFileAbsPath() string {
+	return utils.ExpandHomeDir(e.KeyPath)
 }
 
 func getConnectTimeout() time.Duration {
@@ -181,7 +184,7 @@ func (e *Entry) Tidy() error {
 	if len(e.Port) <= 0 {
 		e.Port = defaultPort
 	}
-	if e.KeyPath == "" && file.IsExist(defaultIdentityFile) {
+	if e.KeyPath == "" && utils.FileExists(defaultIdentityFile) {
 		e.KeyPath = defaultIdentityFile
 	}
 	if e.Proxy != nil {
@@ -216,14 +219,14 @@ func passwordCallback(ctx context.Context, user, host string, storePassFunc func
 		fmt.Printf("%s@%s's password:", user, host)
 		bs, readErr := terminal.ReadPassword(ctx)
 		fmt.Println()
-		if readErr == nil {
-			p := string(bs)
-			if storePassFunc != nil {
-				storePassFunc(p)
-			}
-			return p, nil
+		if readErr != nil {
+			return "", readErr
 		}
-		return "", readErr
+		p := string(bs)
+		if storePassFunc != nil {
+			storePassFunc(p)
+		}
+		return p, nil
 	}
 	return ssh.PasswordCallback(prompt)
 }
@@ -263,7 +266,7 @@ func (e *Entry) privateKeyAuthMethods(ctx context.Context) ([]ssh.AuthMethod, er
 	}
 	var methods []ssh.AuthMethod
 	for _, f := range keyfiles {
-		if !file.IsExist(f) {
+		if !utils.FileExists(f) {
 			lg.Debug("keyfile %s not found, skip", f)
 			continue
 		}
@@ -290,9 +293,9 @@ func (e *Entry) keyfileAuth(ctx context.Context, keypath string) (ssh.AuthMethod
 	signer, err = ssh.ParsePrivateKey(pemBytes)
 	passphraseMissingError := &ssh.PassphraseMissingError{}
 	if err != nil {
-		if keypath != e.KeyPath {
+		if keypath != e.KeyFileAbsPath() {
 			lg.Debug("parse failed, ignore keyfile %q", keypath)
-			return nil, nil
+			return nil, err
 		}
 		if errors.As(err, &passphraseMissingError) {
 			if e.Passphrase != "" {
@@ -327,7 +330,7 @@ var defaultRSAKeyFiles = []string{
 func (e *Entry) collectKeyfiles() []string {
 	var keypaths []string
 	if e.KeyPath != "" && utils.FileExists(e.KeyPath) {
-		keypaths = append(keypaths, e.KeyPath)
+		keypaths = append(keypaths, e.KeyFileAbsPath())
 	}
 	u, err := user.Current()
 	if err != nil {

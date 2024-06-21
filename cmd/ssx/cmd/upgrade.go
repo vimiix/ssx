@@ -3,7 +3,6 @@ package cmd
 import (
 	"context"
 	"fmt"
-	"github.com/vimiix/ssx/ssx/version"
 	"io"
 	"net/http"
 	"os"
@@ -11,10 +10,11 @@ import (
 	"runtime"
 	"strings"
 
+	"github.com/vimiix/ssx/ssx/version"
+
 	"github.com/pkg/errors"
 	"github.com/spf13/cobra"
 	"github.com/tidwall/gjson"
-	"github.com/vimiix/ssx/internal/file"
 	"github.com/vimiix/ssx/internal/lg"
 	"github.com/vimiix/ssx/internal/utils"
 )
@@ -84,7 +84,7 @@ func upgrade(ctx context.Context, opt *upgradeOpt) error {
 				return err
 			}
 		} else {
-			if !file.IsExist(opt.PkgPath) {
+			if !utils.FileExists(opt.PkgPath) {
 				return errors.Errorf("file not found: %s", opt.PkgPath)
 			}
 			localPkg = opt.PkgPath
@@ -131,7 +131,7 @@ func upgrade(ctx context.Context, opt *upgradeOpt) error {
 		return err
 	}
 	newBin := filepath.Join(tempDir, "ssx")
-	if !file.IsExist(newBin) {
+	if !utils.FileExists(newBin) {
 		return errors.New("not found ssx binary after extracting package")
 	}
 	execPath, err := os.Executable()
@@ -183,9 +183,6 @@ func replaceBinary(newBin string, oldBin string) error {
 	if err := os.Link(oldBin, bakBin); err != nil {
 		return err
 	}
-	// if err := file.CopyFile(oldBin, bakName, 0700); err != nil {
-	// 	return err
-	// }
 
 	lg.Debug("remove old binary")
 	if err := os.RemoveAll(oldBin); err != nil {
@@ -193,7 +190,7 @@ func replaceBinary(newBin string, oldBin string) error {
 	}
 
 	lg.Debug("make the new binary effective")
-	if err := file.CopyFile(newBin, oldBin, 0700); err != nil {
+	if err := utils.CopyFile(newBin, oldBin, 0700); err != nil {
 		_ = os.RemoveAll(oldBin)
 		renameErr := os.Rename(bakBin, oldBin)
 		if renameErr != nil {
