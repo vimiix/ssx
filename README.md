@@ -26,6 +26,10 @@ so you do not need to enter the password again when you log in again.
         height="500">
 </p>
 
+## Document
+
+👉 [https://ssx.vimiix.com/](https://ssx.vimiix.com/)
+
 ## Getting Started
 
 ### Installation
