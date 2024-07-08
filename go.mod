@@ -3,7 +3,7 @@ module github.com/vimiix/ssx
 go 1.19
 
 require (
-	github.com/agiledragon/gomonkey/v2 v2.11.0
+	github.com/agiledragon/gomonkey/v2 v2.12.0
 	github.com/containerd/console v1.0.4
 	github.com/denisbrodbeck/machineid v1.0.1
 	github.com/fatih/color v1.17.0
