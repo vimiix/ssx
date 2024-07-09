@@ -17,9 +17,9 @@ require (
 	github.com/tidwall/gjson v1.17.1
 	github.com/vimiix/tablewriter v0.0.0-20231207073205-aad9e2006284
 	go.etcd.io/bbolt v1.3.10
-	golang.org/x/crypto v0.24.0
-	golang.org/x/sys v0.21.0
-	golang.org/x/term v0.21.0
+	golang.org/x/crypto v0.25.0
+	golang.org/x/sys v0.22.0
+	golang.org/x/term v0.22.0
 )
 
 require (
