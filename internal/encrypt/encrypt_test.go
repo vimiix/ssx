@@ -17,7 +17,7 @@ func TestEncryptDecrypt(t *testing.T) {
 	}
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			actual := Decrypt(Encrypt(tt.text, false), false)
+			actual := Decrypt(Encrypt(tt.text))
 			assert.Equal(t, tt.text, actual)
 		})
 	}
@@ -35,7 +35,7 @@ func TestDecrypt(t *testing.T) {
 	}
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			actual := Decrypt(tt.cipher, true)
+			actual := Decrypt(tt.cipher)
 			assert.Equal(t, tt.expect, actual)
 		})
 	}

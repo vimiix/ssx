@@ -97,14 +97,47 @@ func TestMatchAddress(t *testing.T) {
 
 func TestGetSecretKeyShort(t *testing.T) {
 	os.Setenv(env.SSXSecretKey, "abc")
-	res, err := GetSecretKey()
+	res, err := GetDeviceID()
 	assert.NoError(t, err)
 	assert.Equal(t, "abc=============", res)
 }
 
 func TestGetSecretKeyLong(t *testing.T) {
 	os.Setenv(env.SSXSecretKey, "abcdefghijklmnopqrstuvwxyz")
-	res, err := GetSecretKey()
+	res, err := GetDeviceID()
 	assert.NoError(t, err)
 	assert.Equal(t, "abcdefghijklmnop", res)
+}
+
+func TestHashWithSHA256(t *testing.T) {
+	type args struct {
+		input string
+	}
+	tests := []struct {
+		name string
+		args args
+		want string
+	}{
+		{
+			name: "Hash empty string",
+			args: args{
+				input: "",
+			},
+			want: "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+		},
+		{
+			name: "Hash non-empty string",
+			args: args{
+				input: "hello world",
+			},
+			want: "b94d27b9934d3e08a52e52d7da7dabfac484efe37a5380ee9088f7ace2efcde9",
+		},
+	}
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			if got := HashWithSHA256(tt.args.input); got != tt.want {
+				t.Errorf("HashWithSHA256() = %v, want %v", got, tt.want)
+			}
+		})
+	}
 }

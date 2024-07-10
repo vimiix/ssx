@@ -98,6 +98,7 @@ ssx 100 pwd`,
 	// no longer needed, hidden them for backwards compatibility
 	_ = root.Flags().MarkDeprecated("server", "it will remove in the future")
 	_ = root.Flags().MarkDeprecated("tag", "it will remove in the future")
+	_ = root.Flags().MarkDeprecated("unsafe", "no longer work after v0.4")
 
 	root.CompletionOptions.HiddenDefaultCmd = true
 	root.SetHelpCommand(&cobra.Command{Hidden: true})

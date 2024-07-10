@@ -73,10 +73,92 @@ func NewSSX(opt *CmdOption) (*SSX, error) {
 	if err := ssx.initRepo(); err != nil {
 		return nil, err
 	}
+
+	validate, err := ssx.ValidateRepo()
+	if err != nil {
+		return nil, err
+	}
+	if !validate {
+		if err := ssx.ChallengeDBPassword(); err != nil {
+			return nil, err
+		}
+	}
+
 	if err := ssx.loadUserSSHConfig(); err != nil {
 		return nil, err
 	}
 	return ssx, nil
+}
+
+var (
+	DeviceID = []byte("device_id")
+	Password = []byte("password")
+)
+
+func (s *SSX) ChallengeDBPassword() error {
+	v, err := s.repo.GetMetadata(Password)
+	if err != nil {
+		return err
+	}
+
+	prompt := promptui.Prompt{
+		Label: "Input db password",
+		Mask:  '*',
+		Validate: func(s string) error {
+			if len(s) == 0 {
+				return errors.New("password can't be empty")
+			}
+			return nil
+		},
+	}
+	if len(v) == 0 {
+		lg.Warn("db password not set, please supplement it")
+		// not set password, fill it
+		password, err := prompt.Run()
+		if err != nil {
+			return err
+		}
+		encrypt := utils.HashWithSHA256(password)
+		return s.repo.SetMetadata(Password, []byte(encrypt))
+	}
+
+	password, err := prompt.Run()
+	if err != nil {
+		return err
+	}
+	encrypt := utils.HashWithSHA256(password)
+	if encrypt == string(v) {
+		return s.updateDeviceID()
+	}
+	return errors.New("Invalid password")
+}
+
+func (s *SSX) updateDeviceID() error {
+	deviceID, err := utils.GetDeviceID()
+	if err != nil {
+		return err
+	}
+	return s.repo.SetMetadata(DeviceID, []byte(deviceID))
+}
+
+func (s *SSX) ValidateRepo() (bool, error) {
+	v, err := s.repo.GetMetadata(DeviceID)
+	if err != nil {
+		return false, err
+	}
+	if len(v) == 0 {
+		// old version not set, filling it by default
+		return true, s.updateDeviceID()
+	}
+	deviceID, err := utils.GetDeviceID()
+	if err != nil {
+		return false, err
+	}
+	if string(v) == deviceID {
+		return true, nil
+	}
+	lg.Error("device id not match")
+	return false, nil
 }
 
 func (s *SSX) initRepo() error {
@@ -210,17 +292,12 @@ func (s *SSX) buildNewEntry(host, username, port string) (*entry.Entry, error) {
 		// Takes effect for new entry only
 		port = strconv.Itoa(s.opt.Port)
 	}
-	safeMode := entry.ModeSafe
-	if s.opt.Unsafe || env.IsUnsafeMode() {
-		safeMode = entry.ModeUnsafe
-	}
 	e := &entry.Entry{
-		Host:     host,
-		User:     username,
-		Port:     port,
-		KeyPath:  utils.ExpandHomeDir(s.opt.IdentityFile),
-		Source:   entry.SourceSSXStore,
-		SafeMode: safeMode,
+		Host:    host,
+		User:    username,
+		Port:    port,
+		KeyPath: utils.ExpandHomeDir(s.opt.IdentityFile),
+		Source:  entry.SourceSSXStore,
 	}
 	if s.opt.JumpServers != "" {
 		proxy, err := parseProxyChainFromString(s.opt.JumpServers)

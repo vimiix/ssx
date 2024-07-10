@@ -4,6 +4,8 @@ import (
 	"archive/tar"
 	"compress/gzip"
 	"context"
+	"crypto/sha256"
+	"encoding/hex"
 	"io"
 	"net/http"
 	"net/url"
@@ -98,25 +100,22 @@ func MatchAddress(addr string) (*Address, error) {
 	return addrObj, nil
 }
 
-func to16chars(s string) string {
-	if len(s) >= 16 {
-		return s[:16]
-	}
-	return s + strings.Repeat("=", 16-len(s))
-}
-
-// GetSecretKey get secret key from env, if not set returns machine id
+// GetDeviceID get secret key from env, if not set returns machine id
 // always returns 16 characters key
-func GetSecretKey() (string, error) {
+func GetDeviceID() (string, error) {
+	if os.Getenv(env.SSXDeviceID) != "" {
+		return os.Getenv(env.SSXDeviceID), nil
+	}
 	if os.Getenv(env.SSXSecretKey) != "" {
-		return to16chars(os.Getenv(env.SSXSecretKey)), nil
+		lg.Warn("env SSX_SECRET_KEY is deprecated, please use SSX_DEVICE_ID instead")
+		return os.Getenv(env.SSXSecretKey), nil
 	}
 	// ref: https://man7.org/linux/man-pages/man5/machine-id.5.html
 	machineID, err := machineid.ProtectedID("ssx")
 	if err != nil {
-		return "", err
+		return "", errors.Wrap(err, "failed to get machine id")
 	}
-	return to16chars(machineID), nil
+	return machineID, nil
 }
 
 func DownloadFile(ctx context.Context, urlStr string, saveFile string) error {
@@ -272,4 +271,12 @@ func CopyFile(src, dst string, perm os.FileMode) error {
 	defer tf.Close()
 	_, err = io.Copy(tf, sf)
 	return err
+}
+
+// HashWithSHA256 hashes the input string using SHA-256 and returns the hexadecimal representation of the hash
+func HashWithSHA256(input string) string {
+	hash := sha256.New()
+	hash.Write([]byte(input))
+	hashedBytes := hash.Sum(nil)
+	return hex.EncodeToString(hashedBytes)
 }

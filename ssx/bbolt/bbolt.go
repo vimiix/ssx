@@ -205,8 +205,8 @@ func NewRepo(file string) *Repo {
 }
 
 func encodeEntry(e *entry.Entry) ([]byte, error) {
-	e.Password = encrypt.Encrypt(e.Password, e.IsUnsafe())
-	e.Passphrase = encrypt.Encrypt(e.Passphrase, e.IsUnsafe())
+	e.Password = encrypt.Encrypt(e.Password)
+	e.Passphrase = encrypt.Encrypt(e.Passphrase)
 	return json.Marshal(e)
 }
 
@@ -215,7 +215,7 @@ func decodeEntry(bs []byte) (*entry.Entry, error) {
 	if err := json.Unmarshal(bs, e); err != nil {
 		return nil, err
 	}
-	e.Password = encrypt.Decrypt(e.Password, e.IsUnsafe())
-	e.Passphrase = encrypt.Decrypt(e.Passphrase, e.IsUnsafe())
+	e.Password = encrypt.Decrypt(e.Password)
+	e.Passphrase = encrypt.Decrypt(e.Passphrase)
 	return e, nil
 }
