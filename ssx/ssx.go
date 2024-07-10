@@ -74,6 +74,9 @@ func NewSSX(opt *CmdOption) (*SSX, error) {
 		return nil, err
 	}
 
+	if err := ssx.MakeSurePasswordIsSet(); err != nil {
+		return nil, err
+	}
 	validate, err := ssx.ValidateRepo()
 	if err != nil {
 		return nil, err
@@ -95,6 +98,34 @@ var (
 	Password = []byte("password")
 )
 
+func (s *SSX) MakeSurePasswordIsSet() error {
+	v, err := s.repo.GetMetadata(Password)
+	if err != nil {
+		return err
+	}
+	if len(v) > 0 {
+		return nil
+	}
+	lg.Warn("db password not set, please supplement it")
+	// not set password, fill it
+	prompt := promptui.Prompt{
+		Label: "Input db password",
+		Mask:  '*',
+		Validate: func(s string) error {
+			if len(s) == 0 {
+				return errors.New("password can't be empty")
+			}
+			return nil
+		},
+	}
+	password, err := prompt.Run()
+	if err != nil {
+		return err
+	}
+	encrypt := utils.HashWithSHA256(password)
+	return s.repo.SetMetadata(Password, []byte(encrypt))
+}
+
 func (s *SSX) ChallengeDBPassword() error {
 	v, err := s.repo.GetMetadata(Password)
 	if err != nil {
@@ -111,22 +142,12 @@ func (s *SSX) ChallengeDBPassword() error {
 			return nil
 		},
 	}
-	if len(v) == 0 {
-		lg.Warn("db password not set, please supplement it")
-		// not set password, fill it
-		password, err := prompt.Run()
-		if err != nil {
-			return err
-		}
-		encrypt := utils.HashWithSHA256(password)
-		return s.repo.SetMetadata(Password, []byte(encrypt))
-	}
-
 	password, err := prompt.Run()
 	if err != nil {
 		return err
 	}
 	encrypt := utils.HashWithSHA256(password)
+	// v is not empty, we have ensure it in MakeSurePasswordIsSet
 	if encrypt == string(v) {
 		return s.updateDeviceID()
 	}
