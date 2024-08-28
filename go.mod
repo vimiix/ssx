@@ -14,7 +14,7 @@ require (
 	github.com/skeema/knownhosts v1.2.2
 	github.com/spf13/cobra v1.8.1
 	github.com/stretchr/testify v1.9.0
-	github.com/tidwall/gjson v1.17.1
+	github.com/tidwall/gjson v1.17.3
 	github.com/vimiix/tablewriter v0.0.0-20231207073205-aad9e2006284
 	go.etcd.io/bbolt v1.3.11
 	golang.org/x/crypto v0.24.0
