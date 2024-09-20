@@ -35,7 +35,10 @@ func (r *Repo) GetMetadata(key []byte) ([]byte, error) {
 	var res []byte
 	lg.Debug("bbolt repo: get metadata: %s", string(key))
 	_ = r.db.View(func(tx *bbolt.Tx) error {
-		res = tx.Bucket(r.metaBucket).Get(key)
+		v := tx.Bucket(r.metaBucket).Get(key)
+		res = make([]byte, len(v))
+		// 'v' is only valid for the life of the transaction
+		copy(res, v)
 		return nil
 	})
 	return res, nil
