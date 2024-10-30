@@ -1,5 +1,29 @@
 # 发布日志
 
+## v0.4.3
+
+发布时间：2024年9月20日
+
+**Bug Fix:**
+
+- 修复Mac m1中使用时，会出现unexpected fault address 0xxxxx的问题 ([#62](https://github.com/vimiix/ssx/issues/62))
+
+## v0.4.2
+
+发布时间：2024年9月18日
+
+**Changelog:**
+
+- 更新依赖库版本
+
+## v0.4.1
+
+发布时间：2024年8月28日
+
+**Changelog:**
+
+- 更新依赖库版本
+
 ## v0.4.0
 
 发布时间：2024年7月10日
