@@ -29,10 +29,10 @@ ssx [USER@]HOST[:PORT]
 # Login with proxy server
 ssx [-J PROXY_USER@PROXY_HOST:PROXY_PORT] [USER@]HOST[:PORT]]
 
-# After login once, you can login directly with host or tag or specify ID with -i
+# After login once, you can login directly with host or tag or specify ID with --id
 ssx [USER@]HOST[:PORT]
 ssx TAG_NAME
-ssx -i ID
+ssx --id ID
 
 # Fuzzy search is also supported
 # For example, you want to login to 192.168.1.100 and
@@ -76,10 +76,10 @@ ssx 100 pwd`,
 		},
 	}
 	root.Flags().StringVarP(&opt.DBFile, "file", "f", "", "filepath to store auth data")
-	root.Flags().Uint64VarP(&opt.EntryID, "id", "i", 0, "entry id")
+	root.Flags().Uint64VarP(&opt.EntryID, "id", "", 0, "entry id")
 	root.Flags().StringVarP(&opt.Addr, "server", "s", "", "target server address\nsupport format: [user@]host[:port]")
 	root.Flags().StringVarP(&opt.Tag, "tag", "t", "", "search entry by tag")
-	root.Flags().StringVarP(&opt.IdentityFile, "keyfile", "k", "", "identity_file path")
+	root.Flags().StringVarP(&opt.IdentityFile, "identity-file", "i", "", "identity_file path")
 	root.Flags().StringVarP(&opt.JumpServers, "jump-server", "J", "", "jump servers, multiple jump hops may be specified separated by comma characters\nformat: [user1@]host1[:port1][,[user2@]host2[:port2]...]")
 	root.Flags().StringVarP(&opt.Command, "cmd", "c", "", "excute the command and exit")
 	root.Flags().DurationVar(&opt.Timeout, "timeout", 0, "timeout for connecting and executing command")

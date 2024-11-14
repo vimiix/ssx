@@ -21,11 +21,6 @@
 It will automatically remember the server which login through it,
 so you do not need to enter the password again when you log in again.
 
-<p align="center">
-    <img src="https://raw.githubusercontent.com/vimiix/ssx/master/static/demo.svg?sanitize=true"
-        height="500">
-</p>
-
 ## Document
 
 👉 [https://ssx.vimiix.com/](https://ssx.vimiix.com/)
@@ -47,7 +42,7 @@ then you can get ssx binary in **dist** directory.
 ### Add a new entry
 
 ```bash
-ssx [USER@]HOST[:PORT] [-k IDENTITY_FILE] [-p PORT]
+ssx [USER@]HOST[:PORT] [-i IDENTITY_FILE] [-p PORT]
 ```
 
 If given address matched an exist entry, ssx will login directly.
@@ -84,7 +79,7 @@ ssx list
 ### Tag an entry
 
 ```bash
-ssx tag -i <ENTRY_ID> [-t TAG1 [-t TAG2 ...]] [-d TAG3 [-d TAG4 ...]]
+ssx tag --id <ENTRY_ID> [-t TAG1 [-t TAG2 ...]] [-d TAG3 [-d TAG4 ...]]
 ```
 
 Once we tag the entry, we can log in through the tag later.
@@ -98,7 +93,7 @@ If not specified any flag, ssx will treat the second argument as a keyword for s
 ssx
 
 # login by entry id
-ssx -i <ID>
+ssx --id <ID>
 
 # login by address, support partial words
 ssx <ADDRESS>
@@ -120,7 +115,7 @@ ssx 1.100 pwd
 ### Delete an entry
 
 ```bash
-ssx delete -i <ENTRY_ID>
+ssx delete --id <ENTRY_ID>
 ```
 
 ## Supported environment variables

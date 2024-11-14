@@ -1,5 +1,30 @@
 # 发布日志
 
+## v0.5.0
+
+发布时间：2024年11月14日
+
+### BREAKING CHANGE
+
+- Changed the SSH identity file flag from `-k` to `-i` to be more compatible with the standard `ssh` command
+- Changed the entry ID flag from `-i` to `--id` across all commands for consistency
+- Updated command examples and help text to reflect the new flag names
+
+### Why
+
+- The `-i` flag is the standard flag for specifying identity files in SSH, making SSX more intuitive for users familiar with SSH
+- Using `--id` for entry IDs makes the parameter name more descriptive and avoids conflict with the SSH identity file flag
+
+### Example Usage
+
+```text
+Old: ssx delete -i 123
+New: ssx delete --id 123
+
+Old: ssx -k ~/.ssh/id_rsa
+New: ssx -i ~/.ssh/id_rsa
+```
+
 ## v0.4.3
 
 发布时间：2024年9月20日

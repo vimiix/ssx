@@ -12,7 +12,7 @@ func newDeleteCmd() *cobra.Command {
 		Use:     "delete",
 		Aliases: []string{"d", "del"},
 		Short:   "delete entry by id",
-		Example: "ssx delete -i1 [-i2 ...]",
+		Example: "ssx delete --id 1 [--id 2 ...]",
 		RunE: func(cmd *cobra.Command, args []string) error {
 			if len(ids) == 0 {
 				fmt.Println("no id specified, do nothing")
@@ -21,6 +21,6 @@ func newDeleteCmd() *cobra.Command {
 			return ssxInst.DeleteEntryByID(ids...)
 		},
 	}
-	cmd.Flags().IntSliceVarP(&ids, "id", "i", nil, "entry id")
+	cmd.Flags().IntSliceVarP(&ids, "id", "", nil, "entry id")
 	return cmd
 }

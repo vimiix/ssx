@@ -31,7 +31,7 @@ func newInfoCmd() *cobra.Command {
 			fmt.Println(string(bs))
 			return nil
 		}}
-	cmd.Flags().Uint64VarP(&opt.EntryID, "id", "i", 0, "entry id")
+	cmd.Flags().Uint64VarP(&opt.EntryID, "id", "", 0, "entry id")
 	cmd.Flags().StringVarP(&opt.Addr, "server", "s", "", "target server address\nsupport formats: [user@]host[:port]")
 	cmd.Flags().StringVarP(&opt.Tag, "tag", "t", "", "search entry by tag")
 

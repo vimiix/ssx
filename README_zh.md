@@ -21,11 +21,6 @@
 
 它会自动记住通过它登录的服务器，因此，当您再次登录时，无需再次输入密码。
 
-<p align="center">
-    <img src="https://raw.githubusercontent.com/vimiix/ssx/master/static/demo.svg?sanitize=true"
-        height="500">
-</p>
-
 ## 在线文档
 
 👉 [https://ssx.vimiix.com/](https://ssx.vimiix.com/)
@@ -47,12 +42,12 @@ make ssx
 ### 添加新条目(登录一次即代表新增)
 
 ```bash
-ssx [USER@]HOST[:PORT] [-k IDENTITY_FILE] [-p PORT]
+ssx [USER@]HOST[:PORT] [-i IDENTITY_FILE] [-p PORT]
 ```
 
 > 如果给定的地址与一个存在的条目匹配，ssx 将直接登录。
 
-在这个命令中，`USER` 是可以省略的，如果省略则是系统当前用户名；`PORT` 是可以省略的，默认是 `22`，`-k IDENTITY_FILE` 代表的是使用私钥登录，通过 `-k` 来指定私钥的路径，也是可以省略的，默认是 `~/.ssh/id_rsa`，当然了，前提是这个文件存在。所以精简后的登录命令就是：`ssx <ip>`
+在这个命令中，`USER` 是可以省略的，如果省略则是系统当前用户名；`PORT` 是可以省略的，默认是 `22`，`-i IDENTITY_FILE` 代表的是使用私钥登录，通过 `-i` 来指定私钥的路径，也是可以省略的，默认是 `~/.ssh/id_rsa`，当然了，前提是这个文件存在。所以精简后的登录命令就是：`ssx <ip>`
 
 当首次登录，不存在可用私钥时，会通过交互方式来让用户输入密码，一旦登录成功，这个密码就会被 ssx 保存到本地的数据文件中 (默认为 **~/.ssx/db**， 可通过环境变量 `SSX_DB_PATH` 进行自定义)，下次登录时，仍然执行 `ssx <ip>` 即可自动登录。
 
@@ -95,10 +90,10 @@ ssx 会给每个存储的服务器分配一个唯一的 `ID`，我们在打标�
 打标签需要通过 ssx 的 `tag` 子命令来完成，下面是 tag 命令的模式：
 
 ```bash
-ssx tag -i <ENTRY_ID> [-t TAG1 [-t TAG2 ...]] [-d TAG3 [-d TAG4 ...]]
+ssx tag --id <ENTRY_ID> [-t TAG1 [-t TAG2 ...]] [-d TAG3 [-d TAG4 ...]]
 ```
 
-- -i 指定 list 命令输出的要操作的服务器对应的 ID 字段
+- --id 指定 list 命令输出的要操作的服务器对应的 ID 字段
 - -t 指定要添加的标签名，可以多次指定就可以同时添加多个标签
 - -d 打标签的同时也支持删除已有标签，通过 -d 指定要删除的标签名，同样也可以多次指定
 
@@ -117,7 +112,7 @@ ssx centos
 ssx
 
 # 按条目id登录
-ssx -i <ID>
+ssx --id <ID>
 
 # 通过地址登录，支持部分单词
 ssx <ADDRESS>
@@ -143,7 +138,7 @@ ssx centos [-c] pwd
 ### 删除服务器条目
 
 ```bash
-ssx delete -i <ENTRY_ID>
+ssx delete --id <ENTRY_ID>
 ```
 
 ## 支持的环境变量

@@ -15,7 +15,7 @@ func newTagCmd() *cobra.Command {
 		Use:     "tag",
 		Aliases: []string{"t"},
 		Short:   "add or delete tag for entry by id",
-		Example: "ssx tag -i <ENTRY_ID> [-t TAG1 [-t TAG2 ...]] [-d TAG3 [-d TAG4 ...]]",
+		Example: "ssx tag --id <ENTRY_ID> [-t TAG1 [-t TAG2 ...]] [-d TAG3 [-d TAG4 ...]]",
 		RunE: func(cmd *cobra.Command, args []string) error {
 			if len(appendtTags) == 0 && len(deleteTags) == 0 {
 				return errors.New("no tag is spicified")
@@ -34,7 +34,7 @@ func newTagCmd() *cobra.Command {
 		},
 	}
 
-	cmd.Flags().IntVarP(&id, "id", "i", 0, "entry id")
+	cmd.Flags().IntVarP(&id, "id", "", 0, "entry id")
 	cmd.Flags().StringSliceVarP(&appendtTags, "tag", "t", nil, "tag name to add")
 	cmd.Flags().StringSliceVarP(&deleteTags, "delete", "d", nil, "tag name to delete")
 	_ = cmd.MarkFlagRequired("id")

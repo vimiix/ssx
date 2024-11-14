@@ -112,7 +112,7 @@ func upgrade(ctx context.Context, opt *upgradeOpt) error {
 			return err
 		}
 		// check version
-		lg.Info("LatestVersion: %s, NowVersion: %s", pkgInfo.Version, version.Version)
+		lg.Info("latest version: %s, current version: %s", pkgInfo.Version, version.Version)
 		if pkgInfo.Version == version.Version {
 			lg.Info("You are currently using the latest version.")
 			return nil
