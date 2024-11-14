@@ -21,7 +21,7 @@ import (
 
 const (
 	GITHUB_LATEST_API = "https://api.github.com/repos/vimiix/ssx/releases/latest"
-	GITHUB_PKG_FMT    = "https://github.com/vimiix/ssx/releases/download/v{VERSION}/ssx_v{VERSION}_{OS}_{ARCH}.tar.gz"
+	GITHUB_PKG_FMT    = "https://github.com/vimiix/ssx/releases/download/v{VERSION}/ssx_v{VERSION}_{OS}_{ARCH}.{SUFFIX}"
 )
 
 type upgradeOpt struct {
@@ -68,6 +68,13 @@ func unifyArch() (string, error) {
 	}
 }
 
+func fileSuffix() string {
+	if runtime.GOOS == "windows" {
+		return "zip"
+	}
+	return "tar.gz"
+}
+
 func upgrade(ctx context.Context, opt *upgradeOpt) error {
 	tempDir, err := os.MkdirTemp("", "*")
 	if err != nil {
@@ -76,9 +83,11 @@ func upgrade(ctx context.Context, opt *upgradeOpt) error {
 	lg.Debug("make temp dir: %s", tempDir)
 	defer os.RemoveAll(tempDir)
 	var localPkg string
+	suffix := fileSuffix()
+	localFileName := "ssx." + suffix
 	if opt.PkgPath != "" {
 		if strings.Contains(opt.PkgPath, "://") {
-			localPkg = filepath.Join(tempDir, "ssx.tar.gz")
+			localPkg = filepath.Join(tempDir, localFileName)
 			lg.Info("downloading package from %s", opt.PkgPath)
 			if err := utils.DownloadFile(ctx, opt.PkgPath, localPkg); err != nil {
 				return err
@@ -98,9 +107,10 @@ func upgrade(ctx context.Context, opt *upgradeOpt) error {
 		if err != nil {
 			return err
 		}
-		replacer := strings.NewReplacer("{VERSION}", semVer, "{OS}", runtime.GOOS, "{ARCH}", arch)
+		replacer := strings.NewReplacer("{VERSION}", semVer, "{OS}", runtime.GOOS,
+			"{ARCH}", arch, "{SUFFIX}", suffix)
 		urlStr := replacer.Replace(GITHUB_PKG_FMT)
-		localPkg = filepath.Join(tempDir, "ssx.tar.gz")
+		localPkg = filepath.Join(tempDir, localFileName)
 		lg.Info("downloading package from %s", urlStr)
 		if err := utils.DownloadFile(ctx, urlStr, localPkg); err != nil {
 			return err
@@ -120,14 +130,14 @@ func upgrade(ctx context.Context, opt *upgradeOpt) error {
 		if pkgInfo.DownloadURL == "" {
 			return errors.New("failed to get latest package url")
 		}
-		localPkg = filepath.Join(tempDir, "ssx.tar.gz")
+		localPkg = filepath.Join(tempDir, localFileName)
 		lg.Info("downloading latest package from %s", pkgInfo.DownloadURL)
 		if err := utils.DownloadFile(ctx, pkgInfo.DownloadURL, localPkg); err != nil {
 			return err
 		}
 	}
 	lg.Info("extracting package")
-	if err := utils.Untar(localPkg, tempDir); err != nil {
+	if err := utils.Extract(localPkg, tempDir); err != nil {
 		return err
 	}
 	newBin := filepath.Join(tempDir, "ssx")
@@ -169,11 +179,12 @@ func getLatestPkgInfo() (*LatestPkgInfo, error) {
 	// get latest version by tag name
 	latestVersion := gjson.Get(stringBody, "tag_name")
 	// get download url
-	downloadUrl := gjson.Get(stringBody,
-		fmt.Sprintf(`assets.#(name%%"*%s_%s.tar.gz").browser_download_url`, runtime.GOOS, arch))
+	suffix := fileSuffix()
+	downloadURL := gjson.Get(stringBody,
+		fmt.Sprintf(`assets.#(name%%"*%s_%s.%s").browser_download_url`, runtime.GOOS, arch, suffix))
 	return &LatestPkgInfo{
 		Version:     latestVersion.String(),
-		DownloadURL: downloadUrl.String(),
+		DownloadURL: downloadURL.String(),
 	}, nil
 }
 

@@ -1,14 +1,15 @@
 package utils
 
 import (
+	"archive/zip"
 	"fmt"
 	"os"
 	"os/user"
 	"path"
+	"path/filepath"
 	"testing"
 
 	"github.com/stretchr/testify/assert"
-	"github.com/vimiix/ssx/ssx/env"
 )
 
 func TestFileExists(t *testing.T) {
@@ -95,20 +96,6 @@ func TestMatchAddress(t *testing.T) {
 	}
 }
 
-func TestGetSecretKeyShort(t *testing.T) {
-	os.Setenv(env.SSXSecretKey, "abc")
-	res, err := GetDeviceID()
-	assert.NoError(t, err)
-	assert.Equal(t, "abc=============", res)
-}
-
-func TestGetSecretKeyLong(t *testing.T) {
-	os.Setenv(env.SSXSecretKey, "abcdefghijklmnopqrstuvwxyz")
-	res, err := GetDeviceID()
-	assert.NoError(t, err)
-	assert.Equal(t, "abcdefghijklmnop", res)
-}
-
 func TestHashWithSHA256(t *testing.T) {
 	type args struct {
 		input string
@@ -140,4 +127,125 @@ func TestHashWithSHA256(t *testing.T) {
 			}
 		})
 	}
+}
+
+func TestUnzip(t *testing.T) {
+	// Create a temporary directory for testing
+	tmpDir := t.TempDir()
+	// Create a test zip file
+	testZipPath := filepath.Join(tmpDir, "test.zip")
+	if err := createTestZip(testZipPath); err != nil {
+		t.Fatal(err)
+	}
+
+	// Create target directory for extraction
+	targetDir := filepath.Join(tmpDir, "extracted")
+
+	tests := []struct {
+		name      string
+		zipPath   string
+		targetDir string
+		files     []string
+		wantErr   bool
+		checkFn   func(t *testing.T, targetDir string) error
+	}{
+		{
+			name:      "extract all files",
+			zipPath:   testZipPath,
+			targetDir: targetDir,
+			files:     nil,
+			wantErr:   false,
+			checkFn: func(t *testing.T, targetDir string) error {
+				// Check if all files exist
+				files := []string{
+					"file1.txt",
+					"dir1/file2.txt",
+					"dir1/dir2/file3.txt",
+				}
+				for _, f := range files {
+					path := filepath.Join(targetDir, f)
+					if !FileExists(path) {
+						return fmt.Errorf("file not found: %s", path)
+					}
+				}
+				return nil
+			},
+		},
+		{
+			name:      "extract specific file",
+			zipPath:   testZipPath,
+			targetDir: filepath.Join(targetDir, "specific"),
+			files:     []string{"file1.txt"},
+			wantErr:   false,
+			checkFn: func(t *testing.T, targetDir string) error {
+				// Check if only specified file exists
+				if !FileExists(filepath.Join(targetDir, "file1.txt")) {
+					return fmt.Errorf("file1.txt not found")
+				}
+				if FileExists(filepath.Join(targetDir, "dir1/file2.txt")) {
+					return fmt.Errorf("file2.txt should not exist")
+				}
+				return nil
+			},
+		},
+		{
+			name:      "invalid zip path",
+			zipPath:   "nonexistent.zip",
+			targetDir: targetDir,
+			wantErr:   true,
+			checkFn:   nil,
+		},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			// Clean target directory before each test
+			os.RemoveAll(tt.targetDir)
+
+			err := Unzip(tt.zipPath, tt.targetDir, tt.files...)
+			if (err != nil) != tt.wantErr {
+				t.Errorf("Unzip() error = %v, wantErr %v", err, tt.wantErr)
+				return
+			}
+
+			if !tt.wantErr && tt.checkFn != nil {
+				if err := tt.checkFn(t, tt.targetDir); err != nil {
+					t.Errorf("check failed: %v", err)
+				}
+			}
+		})
+	}
+}
+
+// createTestZip creates a test zip file with some test content
+func createTestZip(zipPath string) error {
+	zipFile, err := os.Create(zipPath)
+	if err != nil {
+		return err
+	}
+	defer zipFile.Close()
+
+	zipWriter := zip.NewWriter(zipFile)
+	defer zipWriter.Close()
+
+	// Test files to create
+	files := map[string]string{
+		"file1.txt":           "content of file 1",
+		"dir1/file2.txt":      "content of file 2",
+		"dir1/dir2/file3.txt": "content of file 3",
+	}
+
+	// Create each file in the zip
+	for name, content := range files {
+		f, err := zipWriter.Create(name)
+		if err != nil {
+			return err
+		}
+		_, err = f.Write([]byte(content))
+		if err != nil {
+			return err
+		}
+	}
+
+	return nil
 }

@@ -2,6 +2,7 @@ package utils
 
 import (
 	"archive/tar"
+	"archive/zip"
 	"compress/gzip"
 	"context"
 	"crypto/sha256"
@@ -220,7 +221,8 @@ func Untar(tarPath string, targetDir string, filenames ...string) error {
 		case tar.TypeReg:
 			if specifiedUntar {
 				if len(filenames) == 0 {
-					// 指定要解压的文件都已经找到，应立即返回
+					// The specified files to be extracted have all been found,
+					// and should be returned immediately.
 					return nil
 				}
 				targetIdx := -1
@@ -255,6 +257,100 @@ func Untar(tarPath string, targetDir string, filenames ...string) error {
 			targetFile.Close()
 		}
 	}
+}
+
+func Unzip(zipPath string, targetDir string, filenames ...string) error {
+	// Open the zip file
+	reader, err := zip.OpenReader(zipPath)
+	if err != nil {
+		return err
+	}
+	defer reader.Close()
+
+	// Check if specific files are specified
+	specifiedUnzip := len(filenames) > 0
+
+	// Iterate through all files in zip
+	for _, file := range reader.File {
+		// Prevent zip slip vulnerability
+		if strings.Contains(file.Name, "..") {
+			lg.Warn("ignore file %s due to zip slip vulnerability", file.Name)
+			continue
+		}
+
+		// If files are specified, check if current file is in the list
+		if specifiedUnzip {
+			if len(filenames) == 0 {
+				// All specified files have been extracted, return early
+				return nil
+			}
+			targetIdx := -1
+			for idx, fn := range filenames {
+				if strings.TrimPrefix(fn, "./") == strings.TrimPrefix(file.Name, "./") {
+					targetIdx = idx
+				}
+			}
+			if targetIdx == -1 {
+				continue
+			}
+			// Remove processed file from the pending list
+			filenames = append(filenames[:targetIdx], filenames[targetIdx+1:]...)
+		}
+
+		// Build target path
+		target := filepath.Join(targetDir, filepath.FromSlash(file.Name))
+
+		// Handle directories
+		if file.FileInfo().IsDir() {
+			if err := os.MkdirAll(target, 0700); err != nil {
+				return err
+			}
+			continue
+		}
+
+		// Ensure parent directory exists
+		if err := os.MkdirAll(filepath.Dir(target), 0700); err != nil {
+			return err
+		}
+
+		// Create target file
+		targetFile, err := os.OpenFile(target, os.O_CREATE|os.O_RDWR|os.O_TRUNC, file.Mode())
+		if err != nil {
+			return err
+		}
+
+		// Open source file
+		srcFile, err := file.Open()
+		if err != nil {
+			targetFile.Close()
+			return err
+		}
+
+		// Copy contents
+		_, err = io.Copy(targetFile, srcFile)
+
+		// Close files
+		srcFile.Close()
+		targetFile.Close()
+
+		if err != nil {
+			return err
+		}
+	}
+
+	return nil
+}
+
+func Extract(pkg string, targetDir string) error {
+	if strings.HasSuffix(pkg, ".tar.gz") {
+		return Untar(pkg, targetDir)
+	}
+
+	if strings.HasSuffix(pkg, ".zip") {
+		return Unzip(pkg, targetDir)
+	}
+
+	return errors.New("unsupported archive format")
 }
 
 // CopyFile copies the contents of src to dst
