@@ -85,7 +85,7 @@ type Address struct {
 	Port string
 }
 
-var addrRegex = regexp.MustCompile(`^(?:(?P<user>[\w.-_]+)@)?(?P<host>[\w.-]+)(?::(?P<port>\d+))?(?:/(?P<path>[\w/.-]+))?$`)
+var addrRegex = regexp.MustCompile(`^(?:(?P<user>[\w.\-_]+)@)?(?P<host>[\w.-]+)(?::(?P<port>\d+))?(?:/(?P<path>[\w/.-]+))?$`)
 
 func MatchAddress(addr string) (*Address, error) {
 	matches := addrRegex.FindStringSubmatch(addr)
