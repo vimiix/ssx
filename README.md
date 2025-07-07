@@ -23,7 +23,8 @@ so you do not need to enter the password again when you log in again.
 
 ## Document
 
-👉 [https://ssx.vimiix.com/](https://ssx.vimiix.com/)
+- 👉 [https://ssx.vimiix.com/](https://ssx.vimiix.com/)
+- 🤖 [https://deepwiki.com/vimiix/ssx](https://deepwiki.com/vimiix/ssx/1-overview)
 
 ## Getting Started
 
