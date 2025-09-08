@@ -1,6 +1,6 @@
 module github.com/vimiix/ssx
 
-go 1.23.1
+go 1.24.0
 
 require (
 	github.com/agiledragon/gomonkey/v2 v2.11.0
@@ -18,7 +18,7 @@ require (
 	github.com/vimiix/tablewriter v0.0.0-20231207073205-aad9e2006284
 	go.etcd.io/bbolt v1.4.3
 	golang.org/x/crypto v0.32.0
-	golang.org/x/sys v0.35.0
+	golang.org/x/sys v0.36.0
 	golang.org/x/term v0.34.0
 )
 
