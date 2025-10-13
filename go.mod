@@ -11,15 +11,15 @@ require (
 	github.com/kevinburke/ssh_config v1.4.0
 	github.com/manifoldco/promptui v0.9.0
 	github.com/pkg/errors v0.9.1
-	github.com/skeema/knownhosts v1.3.1
+	github.com/skeema/knownhosts v1.3.2
 	github.com/spf13/cobra v1.10.1
 	github.com/stretchr/testify v1.10.0
 	github.com/tidwall/gjson v1.18.0
 	github.com/vimiix/tablewriter v0.0.0-20231207073205-aad9e2006284
 	go.etcd.io/bbolt v1.4.3
-	golang.org/x/crypto v0.32.0
+	golang.org/x/crypto v0.42.0
 	golang.org/x/sys v0.36.0
-	golang.org/x/term v0.34.0
+	golang.org/x/term v0.35.0
 )
 
 require (
