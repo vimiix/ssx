@@ -36,12 +36,16 @@
           '/en-us/': 'No Results'
         }
       },
+      alias: {
+        '/en-us/_sidebar.md': '/en-us/_sidebar.md',
+        '/zh-cn/_sidebar.md': '/_sidebar.md'
+      },
       plugins: [
           function (hook) {
               var footer = [
                   '<hr/>',
                   '<footer>',
-                  '<span><a href="https://github.com/vimiix/ssx">SSX</a> &copy;2023 - 2024. </span>',
+                  '<span><a href="https://github.com/vimiix/ssx">SSX</a> &copy;2023 - 2025. </span>',
                   '<span>Powered By <a href="https://github.com/docsifyjs/docsify" target="_blank">docsify</a>.</span>',
                   '</footer>'
               ].join('');

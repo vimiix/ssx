@@ -94,6 +94,7 @@ ssx 100 pwd`,
 	root.AddCommand(newTagCmd())
 	root.AddCommand(newInfoCmd())
 	root.AddCommand(newUpgradeCmd())
+	root.AddCommand(newCpCmd())
 
 	// no longer needed, hidden them for backwards compatibility
 	_ = root.Flags().MarkDeprecated("server", "it will remove in the future")

@@ -1,52 +1,52 @@
-# 实践
+# Practices
 
-## 为所有的机器添加 hostname 的标签
+## Add hostname as tag for all machines
 
 ```bash
 ssx list | grep -E '\s\d' | awk '{print $1}' | xargs -I id sh -c 'ssx --id id -c hostname|xargs ssx tag --id id -t '
 ```
 
-## 查看某个服务器的信息
+## View server information
 
 ```bash
 ssx info --id <ID>
 ```
 
-## 获取服务器的IP
+## Get server IP
 
 ```bash
 ssx info --id <ID> | jq .host
 ```
 
-## 使用跳板机登录目标服务器
+## Login via jump server
 
 ```bash
-# 单个跳板机
+# Single jump server
 ssx -J [proxy_user@]proxy_host[:proxy_port] [user@]host[:port]
 
-# 多层跳板机
+# Multiple jump servers
 ssx -J address1,address2,...  target_address
 ```
 
-## 批量备份远程文件到本地
+## Batch backup remote files to local
 
 ```bash
-# 从多个服务器下载配置文件
+# Download config files from multiple servers
 for tag in server1 server2 server3; do
   ssx cp $tag:/etc/nginx/nginx.conf ./backup/${tag}_nginx.conf
 done
 ```
 
-## 在两台服务器之间同步文件
+## Sync files between two servers
 
 ```bash
-# 将生产服务器的日志复制到备份服务器
+# Copy logs from production to backup server
 ssx cp prod:/var/log/app.log backup:/var/log/app.log
 ```
 
-## 使用标签快速上传部署文件
+## Quick upload deployment files using tags
 
 ```bash
-# 上传部署包到所有 web 服务器
+# Upload deployment package to all web servers
 ssx cp ./deploy.tar.gz webserver:/opt/deploy/
 ```

@@ -14,18 +14,18 @@
     <img src="https://img.shields.io/badge/Author-Vimiix-blue" /></a>
 </p>
 
-> 🦅 SSX 是一个有记忆的 SSH 客户端
+> 🦅 SSX is a retentive SSH client
 
-## ✨ 特性
+## ✨ Features
 
-SSX 是一个使用 [Go 语言](https://go.dev/)开发的，无依赖单文件即可运行的二进制文件，他在尽可能地保留和 ssh 类似的使用体验基础上，支持了如下特性：
+SSX is a dependency-free, single-binary executable developed in [Go](https://go.dev/). While preserving an SSH-like user experience, it supports the following features:
 
-- 自动安全的存储已经登录过的服务器条目
-- 支持对登录过的条目进行打标签
-- 支持通过IP片段或标签进行模糊搜索登录
-- 支持文件上传、下载和远程到远程复制
-- 支持一键自动升级
+- Automatically and securely store previously logged-in server entries
+- Support tagging for logged-in entries
+- Support fuzzy search login by IP fragment or tag
+- Support file upload, download, and remote-to-remote copy
+- Support one-click automatic upgrade
 
-## 📝 协议
+## 📝 License
 
-SSX 在 MIT 许可协议下分发。可查看 [LICENSE](https://github.com/vimiix/ssx/blob/main/LICENSE) 文件获取详情
+SSX is distributed under the MIT License. See [LICENSE](https://github.com/vimiix/ssx/blob/main/LICENSE) for more information.
