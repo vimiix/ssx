@@ -4,6 +4,7 @@ go 1.24.0
 
 require (
 	github.com/agiledragon/gomonkey/v2 v2.11.0
+	github.com/bramvdbogaerde/go-scp v1.5.0
 	github.com/containerd/console v1.0.5
 	github.com/denisbrodbeck/machineid v1.0.1
 	github.com/fatih/color v1.18.0
@@ -18,12 +19,11 @@ require (
 	github.com/vimiix/tablewriter v0.0.0-20231207073205-aad9e2006284
 	go.etcd.io/bbolt v1.4.3
 	golang.org/x/crypto v0.45.0
-	golang.org/x/sys v0.38.0
+	golang.org/x/sys v0.39.0
 	golang.org/x/term v0.37.0
 )
 
 require (
-	github.com/bramvdbogaerde/go-scp v1.5.0 // indirect
 	github.com/chzyer/readline v0.0.0-20180603132655-2972be24d48e // indirect
 	github.com/davecgh/go-spew v1.1.1 // indirect
 	github.com/inconshreveable/mousetrap v1.1.0 // indirect
