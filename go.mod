@@ -4,7 +4,7 @@ go 1.24.0
 
 require (
 	github.com/agiledragon/gomonkey/v2 v2.11.0
-	github.com/bramvdbogaerde/go-scp v1.5.0
+	github.com/bramvdbogaerde/go-scp v1.6.0
 	github.com/containerd/console v1.0.5
 	github.com/denisbrodbeck/machineid v1.0.1
 	github.com/fatih/color v1.18.0
